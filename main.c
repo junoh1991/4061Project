@@ -20,6 +20,29 @@ void show_error_message(char * ExecName) {
 target_t targets[MAX_NODES];
 int nTargetCount;
 
+int createProcess(int targetIndex, char* command)
+{
+  pid_t pid;
+  pid = fork();
+  if (pid > 0) // Parent
+  {
+    printf("parent\n");
+    wait(NULL);
+  }  
+  else if (pid == 0) // Child
+  {
+    printf("child\n");
+    execl("/bin/bash", command, (char*)0);
+    perror("Child failed to exec all_ids");
+    return 1;
+  }
+  else
+  {
+    perror("Failed to fork");
+    return 1;
+  }
+}
+
 void buildTarget(char* targetName, target_t targets[], int nTargetCount)
 {
   // Find target.
@@ -35,29 +58,6 @@ void buildTarget(char* targetName, target_t targets[], int nTargetCount)
   // Build using command
   // printf("%s\n", targets[targetIndex].Command);
   createProcess(targetIndex, targets[targetIndex].Command);
-}
-
-int createProcess(int targetIndex, char* command)
-{
-
-  pid_t childpid;
-  childpid = fork();
-  if(childpid == -1)
-  {
-    perror("Failed to fork");
-    return 1;
-  }
-  if (childpid == 0)
-  {
-    execl("/bin/bash", command);
-    perror("Child failed to exec all_ids");
-    return 1;
-  }
-  if(childpid != wait(NULL))
-  {
-    perror("parent failed to wait due to signal or error");
-    return 1;
-  }
 }
 
 int main(int argc, char *argv[]) {
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Comment out the following line before submission */
-  // show_targets(targets, nTargetCount);
+  //show_targets(targets, nTargetCount);
 
   /*
    * Set Targetname
