@@ -20,6 +20,46 @@ void show_error_message(char * ExecName) {
 target_t targets[MAX_NODES];
 int nTargetCount;
 
+void buildTarget(char* targetName, target_t targets[], int nTargetCount)
+{
+  // Find target.
+  int targetIndex = find_target(targetName, targets, nTargetCount);;
+  if (targetIndex != -1)	// Found target
+  {
+	int i;
+    for (i = 0; i<targets[targetIndex].DependencyCount; i++)
+	    buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount);
+  }
+  
+  // Reached here after traversing all leaf nodes. 
+  // Build using command
+  // printf("%s\n", targets[targetIndex].Command);
+  createProcess(targetIndex, targets[targetIndex].Command);
+}
+
+int createProcess(int targetIndex, char* command)
+{
+
+  pid_t childpid;
+  childpid = fork();
+  if(childpid == -1)
+  {
+    perror("Failed to fork");
+    return 1;
+  }
+  if (childpid == 0)
+  {
+    execl("/bin/bash", command);
+    perror("Child failed to exec all_ids");
+    return 1;
+  }
+  if(childpid != wait(NULL))
+  {
+    perror("parent failed to wait due to signal or error");
+    return 1;
+  }
+}
+
 int main(int argc, char *argv[]) {
   nTargetCount = 0;
   
@@ -87,44 +127,4 @@ int main(int argc, char *argv[]) {
   buildTarget(TargetName, targets, nTargetCount);
   
   return 0;
-}
-
-void buildTarget(char* targetName, target_t targets[], int nTargetCount)
-{
-  // Find target.
-  int targetIndex = find_target(targetName, targets, nTargetCount);;
-  if (targetIndex != -1)	// Found target
-  {
-	int i;
-    for (i = 0; i<targets[targetIndex].DependencyCount; i++)
-	    buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount);
-  }
-  
-  // Reached here after traversing all leaf nodes. 
-  // Build using command
-  // printf("%s\n", targets[targetIndex].Command);
-  createProcess(targetIndex, targets[targetIndex].Command);
-}
-
-int createProcess(int targetIndex, char* command)
-{
-
-  pid_t childpid;
-  childpid = fork();
-  if(childpid == -1)
-  {
-    perror("Failed to fork");
-    return 1;
-  }
-  if (childpid == 0)
-  {
-    execl("/bin/bash", command);
-    perror("Child failed to exec all_ids");
-    return 1;
-  }
-  if(childpid != wait(NULL))
-  {
-    perror("parent failed to wait due to signal or error");
-    return 1;
-  }
 }
