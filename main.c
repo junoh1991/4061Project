@@ -102,17 +102,17 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *C
   int i;	
   // Find target.
   int targetIndex = find_target(TargetName, targets , nTargetCount);
-  if (targetIndex == -1)
-  {
-    createProcess(Command);
-  }
-  else if (targetIndex >= 0)	// Found target
+  // if (targetIndex == -1)
+  // {
+    // createProcess(Command);
+  // }
+  if (targetIndex >= 0)	// Found target
   {
     for (i = 0; i<targets[targetIndex].DependencyCount; i++)
     {
       buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets[targetIndex].Command);
     }
-	createProcess (targets[targetIndex].Command);
+	createProcess(targets[targetIndex].Command);
   }
 }
 
