@@ -8,62 +8,15 @@
 #include <unistd.h>
 
 #include "util.h"
-void buildTarget(char* targetName, target_t targets[], int nTargetCount);
 
-void show_error_message(char * ExecName) {
-  fprintf(stderr, "Usage: %s [options] [target] : only single target is allowed.\n", ExecName);
-  fprintf(stderr, "-f FILE\t\tRead FILE as a makefile.\n");
-  fprintf(stderr, "-h\t\tPrint this message and exit.\n");
-  exit(0);
-}
 
-target_t targets[MAX_NODES];
-int nTargetCount;
 
-int createProcess(int targetIndex, char* command)
-{
-  pid_t pid;
-  pid = fork();
-  if (pid > 0) // Parent
-  {
-    printf("parent\n");
-    wait(NULL);
-  }  
-  else if (pid == 0) // Child
-  {
-    printf("child\n");
-    execl("/bin/bash", command, (char*)0);
-    perror("Child failed to exec all_ids");
-    return 1;
-  }
-  else
-  {
-    perror("Failed to fork");
-    return 1;
-  }
-}
 
-void buildTarget(char* targetName, target_t targets[], int nTargetCount)
-{
-  // Find target.
-  int targetIndex = find_target(targetName, targets, nTargetCount);;
-  if (targetIndex != -1)	// Found target
-  {
-	int i;
-    for (i = 0; i<targets[targetIndex].DependencyCount; i++)
-	    buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount);
-  }
-  
-  // Reached here after traversing all leaf nodes. 
-  // Build using command
-  // printf("%s\n", targets[targetIndex].Command);
-  createProcess(targetIndex, targets[targetIndex].Command);
-}
 
 int main(int argc, char *argv[]) {
-  nTargetCount = 0;
-  
   /* Variables you'll want to use */
+  target_t targets[MAX_NODES];
+  int nTargetCount = 0;
   char Makefile[64] = "Makefile";
   char TargetName[64];
 
@@ -100,7 +53,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Comment out the following line before submission */
-  //show_targets(targets, nTargetCount);
+  // show_targets(targets, nTargetCount);
 
   /*
    * Set Targetname
@@ -112,19 +65,62 @@ int main(int argc, char *argv[]) {
     strcpy(TargetName, targets[0].TargetName);
   }
 
-  /*
-   * Now, the file has been parsed and the targets have been named.
-   * You'll now want to check all dependencies (whether they are 
-   * available targets or files) and then execute the target that 
-   * was specified on the command line, along with their dependencies, 
-   * etc. Else if no target is mentioned then build the first target 
-   * found in Makefile.
-   */
-
-  /*
-   * INSERT YOUR CODE HERE
-   */
-  buildTarget(TargetName, targets, nTargetCount);
-  
+  buildTarget(TargetName, targets, nTargetCount, targets[0].Command);	// FIX last parameter
   return 0;
+}
+
+
+int createProcess(char* Command)
+{  
+  /*
+   * For debugging purpose. Delete later
+   */
+  printf("%s\n", Command);
+  
+  pid_t pid;
+  pid = fork();
+  if (pid > 0) // Parent
+  {
+    wait(NULL);
+  }  
+  else if (pid == 0) // Child
+  {
+    execvp(*build_argv(Command), build_argv(Command));
+    perror("Child failed to exec all_ids");
+    return 1;
+  }
+  else
+  {
+    perror("Failed to fork");
+    return 1;
+  }
+}
+
+
+void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command)
+{
+  int i;	
+  // Find target.
+  int targetIndex = find_target(TargetName, targets , nTargetCount);
+  if (targetIndex == -1)
+  {
+    createProcess(Command);
+  }
+  else if (targetIndex >= 0)	// Found target
+  {
+    for (i = 0; i<targets[targetIndex].DependencyCount; i++)
+    {
+      buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets[targetIndex].Command);
+    }
+	createProcess (targets[targetIndex].Command);
+  }
+}
+
+
+
+void show_error_message(char * ExecName) {
+  fprintf(stderr, "Usage: %s [options] [target] : only single target is allowed.\n", ExecName);
+  fprintf(stderr, "-f FILE\t\tRead FILE as a makefile.\n");
+  fprintf(stderr, "-h\t\tPrint this message and exit.\n");
+  exit(0);
 }

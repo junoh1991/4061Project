@@ -14,6 +14,9 @@
 
 #define MAX_NODES 10
 
+
+
+
 /* 
  * Check if file exist
  *
@@ -52,6 +55,8 @@ typedef struct target{
   int  Status;                  /* Status of the target (Ready for execution,
                                  * Finished etc. based on your implementation) */
 }target_t;
+
+
 
 /*
  * Parse Makefile, build the DAG of target dependencies
@@ -106,4 +111,24 @@ void show_targets(target_t targets[], int nTargetCount);
  */
 char **build_argv(const char *Command);
 
+/*
+ * Recursively build target in target_t targets[]
+ *
+ * Input: 
+ *	 targetName, in target array in main()
+ *	 
+ *	 targets, targets array in main()
+ *
+ *   nTargetCount, number of targets returned by 'parse'
+ *
+ *	 Command, targets' member variable
+ *
+ */
+void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command);
+
+
+
+int createProcess(char* Command);
+
+void show_error_message(char * ExecName);
 #endif
