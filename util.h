@@ -14,18 +14,14 @@
 
 #define MAX_NODES 10
 
-
-
-
 /* 
- * Check if file exist
+ * Check if file exists
  *
  * Input:
  *   Filename
  *
  * Return:
- *    0, file exist
- *
+ *    0, file exists
  *   -1 file does not exist
  */
 int does_file_exist(char *FileName);
@@ -52,8 +48,7 @@ typedef struct target{
   int  DependencyCount;         /* Number of dependencies */
   char DependencyNames[10][64]; /* Names of all the dependencies */
   char Command[256];            /* Command that needs to be executed for this target */
-  int  Status;                  /* Status of the target (Ready for execution,
-                                 * Finished etc. based on your implementation) */
+  int  Status;                  /* Status of the target (Ready for execution, Finished, etc.) */
 }target_t;
 
 
@@ -63,12 +58,10 @@ typedef struct target{
  *
  * Input:
  *   Makefile, makefile filename
- *
  *   targets, a static array saving target objects
  *
  * Return:
  *   On SUCCESS, nTargetCount - the number of targets in Makefile
- *
  *   On FAILURE, -1 (error in the Makefile)
  */
 int parse(char *Makefile, target_t targets[]);
@@ -78,12 +71,10 @@ int parse(char *Makefile, target_t targets[]);
  *
  * Input:
  *   targets, targets array in main()
- *
  *   nTargetCount, number of targets returned by 'parse'
  *
  * Return:
  *   On SUCCESS, the index of the given target in targets array
- *
  *   On FAILURE, -1 (not found)
  */
 int find_target(char *TargetName, target_t targets[], int nTargetCount);
@@ -93,7 +84,6 @@ int find_target(char *TargetName, target_t targets[], int nTargetCount);
  *
  * Input:
  *   targets, targets array in main()
- *
  *   nTargetCount, number of targets returned by 'parse'
  */
 void show_targets(target_t targets[], int nTargetCount);
@@ -106,7 +96,6 @@ void show_targets(target_t targets[], int nTargetCount);
  *
  * Return:
  *   On SUCCESS, 'char **argv' to be used to call 'execvp'
- *
  *   On FAILURE, NULL
  */
 char **build_argv(const char *Command);
@@ -116,9 +105,7 @@ char **build_argv(const char *Command);
  *
  * Input: 
  *	 TargetName, in target array in main()
- *	 
  *	 targets, targets array in main()
- *
  *   nTargetCount, number of targets returned by 'parse'
  *
  */
@@ -130,7 +117,6 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount);
  *
  * Input: 
  *	 targets, targets array in main()
- *
  *   targetIndex, speicfic index of targets
  *
  * Return:
@@ -146,7 +132,6 @@ int check_build_time(target_t targets[], int targetIndex);
  *
  * Input:
  *  Command, the name of the target's command from target_t Command
- *
  *  TargetName, in target array in main()
  *
  */
@@ -157,7 +142,6 @@ void createProcess(char* Command, char* TargetName);
  * 
  * Input:
  *  ExecName, argv[] to the main.c
- *  
  *
  * Note: Provided by the initial file.
  */
