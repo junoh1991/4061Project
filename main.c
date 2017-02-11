@@ -28,9 +28,6 @@ int main(int argc, char *argv[]) {
         strcpy(Makefile, strdup(optarg));
         break;
       case 'h':
-	      printf("-f filename: filename will be the name of the makefile, otherwise the default name “Makefile” is assumed. \n \
-		    specificTarget: specificTarget will be the name of any single target in the Makefile. \n \
-		    -h: print make program options available. \n");
       default:
         show_error_message(argv[0]);
         exit(1);
@@ -63,16 +60,17 @@ int main(int argc, char *argv[]) {
   } else {
     strcpy(TargetName, targets[0].TargetName);
   }
-
-  buildTarget(TargetName, targets, nTargetCount, targets[0].Command);	// FIX last parameter
+    
+  // Set Status of 'top' target to 1
+  int targetIndex = find_target(TargetName, targets , nTargetCount);
+  targets[targetIndex].Status = 1;
+    
+  buildTarget(TargetName, targets, nTargetCount);
   return 0;
 }
 
-int createProcess(char* Command)
+int createProcess(char* Command, char* TargetName)
 {  
-  /*
-   * For debugging purpose. Delete later
-   */
   printf("%s\n", Command);
   
   pid_t pid;
@@ -83,7 +81,7 @@ int createProcess(char* Command)
     wait(&wstatus);
     if (WEXITSTATUS(wstatus) != 0)
     {
-      printf("Child failed to execute\n");
+      printf("make4061: *** [%s] Error %d\n", TargetName, WEXITSTATUS(wstatus));
       exit(-1);
     }
   }  
@@ -114,11 +112,16 @@ int check_build_time(target_t targets[], int targetIndex)
 	    targets[targetIndex].DependencyNames[i]) == 2)
 		return 1;	
   }
+  // Check if target is 'clean' (special case)
+  if(strcmp(targets[targetIndex].TargetName, "clean") == 0)
+    return 1;
   
+  if (targets[targetIndex].Status == 1) 
+    printf("make4061: '%s' is up to date\n", targets[targetIndex].TargetName);
   return 0;
 }
 
-void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command)
+void buildTarget(char* TargetName, target_t targets[], int nTargetCount)
 {
   int i;	
   // Find target.
@@ -126,11 +129,11 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *C
   if (targetIndex >= 0)	// Found target
   {
     for (i = 0; i<targets[targetIndex].DependencyCount; i++)
-      buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets 
-      [targetIndex].Command);
+      buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount);
     
+    // If target is 'clean' or
     if (check_build_time(targets, targetIndex) == 1)
-      createProcess(targets[targetIndex].Command);
+      createProcess(targets[targetIndex].Command, targets[targetIndex].TargetName);
   }
   else
   {

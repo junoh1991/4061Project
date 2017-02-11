@@ -124,11 +124,11 @@ char **build_argv(const char *Command);
  *	 Command, targets' member variable
  *
  */
-void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command);
+void buildTarget(char* TargetName, target_t targets[], int nTargetCount);
 
 int check_build_time(target_t targets[], int targetIndex);
 
-int createProcess(char* Command);
+int createProcess(char* Command, char* TargetName);
 
 void show_error_message(char * ExecName);
 #endif
