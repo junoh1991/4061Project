@@ -100,6 +100,24 @@ int createProcess(char* Command)
   }
 }
 
+int check_build_time(target_t targets[], int targetIndex)
+{
+  int i;
+  for (i = 0; i < targets[targetIndex].DependencyCount; i++)
+  {
+	/*
+	 *	If the input file doesnt exist or newer, return 1 at any time of the loop. 
+	 */
+	if (compare_modification_time(targets[targetIndex].TargetName, 
+	    targets[targetIndex].DependencyNames[i]) == -1 || 
+	    compare_modification_time(targets[targetIndex].TargetName, 
+	    targets[targetIndex].DependencyNames[i]) == 2)
+		return 1;	
+  }
+  
+  return 0;
+}
+
 void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command)
 {
   int i;	
@@ -108,10 +126,11 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *C
   if (targetIndex >= 0)	// Found target
   {
     for (i = 0; i<targets[targetIndex].DependencyCount; i++)
-    {
-      buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets[targetIndex].Command);
-    }  
-    createProcess(targets[targetIndex].Command);
+      buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets 
+      [targetIndex].Command);
+    
+    if (check_build_time(targets, targetIndex) == 1)
+      createProcess(targets[targetIndex].Command);
   }
   else
   {
@@ -125,7 +144,7 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *C
 }
 
 void show_error_message(char * ExecName) {
-  fprintf(stderr, "Usage: %s [options] [target] : only single target is allowed.\n", ExecName);
+  fprintf(stderr, "Usage: \n%s [options] [target] : only single target is allowed.\n", ExecName);
   fprintf(stderr, "-f FILE\t\tRead FILE as a makefile.\n");
   fprintf(stderr, "-h\t\tPrint this message and exit.\n");
   exit(0);

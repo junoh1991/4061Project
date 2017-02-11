@@ -126,7 +126,7 @@ char **build_argv(const char *Command);
  */
 void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command);
 
-
+int check_build_time(target_t targets[], int targetIndex);
 
 int createProcess(char* Command);
 
