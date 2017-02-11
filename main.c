@@ -112,8 +112,8 @@ int check_build_time(target_t targets[], int targetIndex)
 	    targets[targetIndex].DependencyNames[i]) == 2)
 		return 1;	
   }
-  // Check if target is 'clean' (special case)
-  if(strcmp(targets[targetIndex].TargetName, "clean") == 0)
+  // Check if target has no dependencies
+  if(targets[targetIndex].DependencyCount == 0)
     return 1;
   
   if (targets[targetIndex].Status == 1) 
