@@ -32,6 +32,9 @@ int main(int argc, char *argv[]) {
         strcpy(Makefile, strdup(optarg));
         break;
       case 'h':
+	printf("-f filename: filename will be the name of the makefile, otherwise the default name “Makefile” is assumed. \n \
+		specificTarget: specificTarget will be the name of any single target in the Makefile. \n \
+		-h: print make program options available.")
       default:
         show_error_message(argv[0]);
         exit(1);
