@@ -115,20 +115,51 @@ char **build_argv(const char *Command);
  * Recursively build target in target_t targets[]
  *
  * Input: 
- *	 targetName, in target array in main()
+ *	 TargetName, in target array in main()
  *	 
  *	 targets, targets array in main()
  *
  *   nTargetCount, number of targets returned by 'parse'
  *
- *	 Command, targets' member variable
- *
  */
 void buildTarget(char* TargetName, target_t targets[], int nTargetCount);
 
+/*
+ * Check relative build time of the target versus its dependencies to check_build_time
+ * if target needs to be built or called
+ *
+ * Input: 
+ *	 targets, targets array in main()
+ *
+ *   targetIndex, speicfic index of targets
+ *
+ * Return:
+ *	 1, if the input file doesn't exist or newer than the target
+ *   0, if the target is up to date
+ *	 
+ */
 int check_build_time(target_t targets[], int targetIndex);
 
-int createProcess(char* Command, char* TargetName);
+/*
+ * Create a child proccess for running commands. 
+ * Prints the commands and, if applicable, errors.
+ *
+ * Input:
+ *  Command, the name of the target's command from target_t Command
+ *
+ *  TargetName, in target array in main()
+ *
+ */
+void createProcess(char* Command, char* TargetName);
 
+/*
+ * Prints out helpful messages for multiple targets and -h helper utility
+ * 
+ * Input:
+ *  ExecName, argv[] to the main.c
+ *  
+ *
+ * Note: Provided by the initial file.
+ */
 void show_error_message(char * ExecName);
 #endif
