@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-int createProcess(char* Command, char* TargetName)
+void createProcess(char* Command, char* TargetName)
 {  
   printf("%s\n", Command);
   
@@ -103,19 +103,19 @@ int check_build_time(target_t targets[], int targetIndex)
   int i;
   for (i = 0; i < targets[targetIndex].DependencyCount; i++)
   {
-	/*
-	 *	If the input file doesnt exist or newer, return 1 at any time of the loop. 
-	 */
+	// If the input file doesnt exist or newer, return 1 at any time of the loop. 
 	if (compare_modification_time(targets[targetIndex].TargetName, 
 	    targets[targetIndex].DependencyNames[i]) == -1 || 
 	    compare_modification_time(targets[targetIndex].TargetName, 
 	    targets[targetIndex].DependencyNames[i]) == 2)
 		return 1;	
   }
+  
   // Check if target has no dependencies
   if(targets[targetIndex].DependencyCount == 0)
     return 1;
-  
+    
+  // Only returns up-to-date message if 'top' target requires no updating
   if (targets[targetIndex].Status == 1) 
     printf("make4061: '%s' is up to date\n", targets[targetIndex].TargetName);
   return 0;
@@ -131,7 +131,7 @@ void buildTarget(char* TargetName, target_t targets[], int nTargetCount)
     for (i = 0; i<targets[targetIndex].DependencyCount; i++)
       buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount);
     
-    // If target is 'clean' or
+    // If target is not up to date execute command
     if (check_build_time(targets, targetIndex) == 1)
       createProcess(targets[targetIndex].Command, targets[targetIndex].TargetName);
   }
