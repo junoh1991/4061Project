@@ -9,10 +9,6 @@
 
 #include "util.h"
 
-
-
-
-
 int main(int argc, char *argv[]) {
   /* Variables you'll want to use */
   target_t targets[MAX_NODES];
@@ -32,9 +28,9 @@ int main(int argc, char *argv[]) {
         strcpy(Makefile, strdup(optarg));
         break;
       case 'h':
-	printf("-f filename: filename will be the name of the makefile, otherwise the default name “Makefile” is assumed. \n \
-		specificTarget: specificTarget will be the name of any single target in the Makefile. \n \
-		-h: print make program options available.")
+	      printf("-f filename: filename will be the name of the makefile, otherwise the default name “Makefile” is assumed. \n \
+		    specificTarget: specificTarget will be the name of any single target in the Makefile. \n \
+		    -h: print make program options available. \n");
       default:
         show_error_message(argv[0]);
         exit(1);
@@ -72,7 +68,6 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-
 int createProcess(char* Command)
 {  
   /*
@@ -84,42 +79,50 @@ int createProcess(char* Command)
   pid = fork();
   if (pid > 0) // Parent
   {
-    wait(NULL);
+    int wstatus;
+    wait(&wstatus);
+    if (WEXITSTATUS(wstatus) != 0)
+    {
+      printf("Child failed to execute\n");
+      exit(-1);
+    }
   }  
   else if (pid == 0) // Child
   {
     execvp(*build_argv(Command), build_argv(Command));
-    perror("Child failed to exec all_ids");
-    return 1;
+    printf("Child failed to exec all_ids\n");
+    exit(-1);
   }
   else
   {
-    perror("Failed to fork");
-    return 1;
+    printf("Failed to fork\n");
+    exit(-1);
   }
 }
-
 
 void buildTarget(char* TargetName, target_t targets[], int nTargetCount, char *Command)
 {
   int i;	
   // Find target.
   int targetIndex = find_target(TargetName, targets , nTargetCount);
-  // if (targetIndex == -1)
-  // {
-    // createProcess(Command);
-  // }
   if (targetIndex >= 0)	// Found target
   {
     for (i = 0; i<targets[targetIndex].DependencyCount; i++)
     {
       buildTarget(targets[targetIndex].DependencyNames[i], targets, nTargetCount, targets[targetIndex].Command);
+    }  
+    createProcess(targets[targetIndex].Command);
+  }
+  else
+  {
+    // Check if dependency was a file instead of a target (such as a .h or .cc file)
+    if(does_file_exist(TargetName) == -1)
+    {
+      printf("Dependency '%s' not found\n", TargetName);
+      exit(-1);
     }
-	createProcess(targets[targetIndex].Command);
   }
 }
-
-
 
 void show_error_message(char * ExecName) {
   fprintf(stderr, "Usage: %s [options] [target] : only single target is allowed.\n", ExecName);
