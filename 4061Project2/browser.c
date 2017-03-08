@@ -135,9 +135,66 @@ int router_process() {
 	//       If the killed process is a URL-RENDERING process, send message to the URL-RENDERING to kill it
 	//   sleep some time if no message received
 	//
+    int router_controller[2];
+    int pid, flags;
+    int proceIndex = 0;
+
+    // Create a pipe b/w router and controller
+    if (pipe(router_controller) == -1)
+    {
+        perror("pipe error");
+        exit(1);
+    }
+
+    // Set Non block-read from controller.
+    flags = fcntl(router_controller[0], F_GETFL, 0);
+    fcntl(router_controller[0], F_SETFL, flags | O_NONBLOCK);
+    channel[0] -> child_to_parent_fd[0] = router_controller[0];    
+    channel[0] -> child_to_parent_fd[1] = router_controller[1];    
+    pid = fork();
+    // Parents
+    if (pid >  0)
+    {
+        wait(NULL);     
+        usleep(1000); // Sleep 1ms
+    }
+    // Child
+    else if (pid ==  0)
+    {     
+        controller_process(channel[0]);
+    }
+    // Fork Error
+    else
+    {
+        perror("Fork Error");
+    }
+
 	return 0;
 }
 
 int main() {
 	return router_process();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
