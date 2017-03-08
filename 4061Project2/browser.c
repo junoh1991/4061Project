@@ -119,7 +119,8 @@ int controller_process(comm_channel *channel) {
  */
 int router_process() {
 	comm_channel *channel[MAX_TAB];
-	// Append your code here
+	channel[0] = (comm_channel *) malloc(sizeof(comm_channel));
+    // Append your code here
 	// Prepare communication pipes with the CONTROLLER process
 	// Fork the CONTROLLER process
 	//   call controller_process() in the forked CONTROLLER process
