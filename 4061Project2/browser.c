@@ -76,7 +76,6 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
     child_req_to_parent new_tab = {CREATE_TAB, b};
     // Send the struct to ROUTER
     write(channel.child_to_parent_fd[1], &new_tab, sizeof(&new_tab));
-	show_browser();
 }
 
 /*
@@ -189,10 +188,9 @@ int router_process() {
     // Set Non block-read from controller.
     flags = fcntl(channel[0] -> child_to_parent_fd[0], F_GETFL, 0);
     fcntl(channel[0] -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
-    pid = fork();
-	
-    // Parents
-    if (pid >  0)
+    
+	pid = fork();
+    if (pid >  0) // parent
     {
 		close(channel[0] -> child_to_parent_fd[1]);	// close write-end pipe
 		
@@ -204,6 +202,7 @@ int router_process() {
                 if (read(channel[i] -> child_to_parent_fd[0], temp, sizeof(temp)) > 0)
 				{
 					command_type = temp -> type;
+					printf("%i\n", command_type);
 					switch (command_type)
 					{
 						case 0:	// Receive new tab command from controller process
@@ -218,6 +217,7 @@ int router_process() {
 								perror("pipe error");
 								break;
 							}
+							
 
 							router_create_tab(channel[tab_index], tab_index);
 							tab_index++;
@@ -235,11 +235,8 @@ int router_process() {
 						default:
 							break;
 					}
-				}
-
-					
+				}	
             }
-
 			
             usleep(1000);
         }            
