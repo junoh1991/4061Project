@@ -23,23 +23,29 @@ extern int errno;
  *                      process.
  */
 void uri_entered_cb(GtkWidget* entry, gpointer data) {
-	if(data == NULL) {	
-		return;
-	}
-	browser_window *b_window = (browser_window *)data;
-	// This channel have pipes to communicate with ROUTER. 
-	comm_channel channel = ((browser_window*)data)->channel;
-	// Get the tab index where the URL is to be rendered
-	int tab_index = query_tab_id_for_request(entry, data);
-	if(tab_index <= 0) {
-		fprintf(stderr, "Invalid tab index (%d).", tab_index);
-		return;
-	}
-	// Get the URL.
-	char * uri = get_entered_uri(entry);
-	// Append your code here
-	// Send 'which' message to 'which' process?
-	//
+    if(data == NULL) {	
+        return;
+    }
+    browser_window *b_window = (browser_window *)data;
+    // This channel have pipes to communicate with ROUTER. 
+    comm_channel channel = ((browser_window*)data)->channel;
+    // Get the tab index where the URL is to be rendered
+    int tab_index = query_tab_id_for_request(entry, data);
+    if(tab_index <= 0) {
+        fprintf(stderr, "Invalid tab index (%d).", tab_index);
+        return;
+    }
+    // Get the URL.
+    char * uri = get_entered_uri(entry);
+    // Create struct with information for creating new tab
+    new_uri_req a;
+    strcpy(a.uri, uri);
+    a.render_in_tab = tab_index;
+    child_request b;
+    b.uri_req = a;
+    child_req_to_parent new_uri = {NEW_URI_ENTERED, b};
+    // Send the struct to ROUTER
+    write(channel.child_to_parent_fd[1], &new_uri, sizeof(&new_uri));
 }
 
 /*
@@ -57,15 +63,19 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
  */ 
 void create_new_tab_cb(GtkButton *button, gpointer data)
 {
-	if(data == NULL) {
-		return;
-	}
-	browser_window *b_window = (browser_window *)data;
-	// This channel have pipes to communicate with ROUTER. 
-	comm_channel channel = ((browser_window*)data)->channel;
-	// Append your code here
-	// Send 'which' message to 'which' process?
-	//
+    if(data == NULL) {
+        return;
+    }
+    browser_window *b_window = (browser_window *)data;
+    // This channel have pipes to communicate with ROUTER. 
+    comm_channel channel = ((browser_window*)data)->channel;  
+    // Create struct with information for creating new tab
+    create_new_tab_req a;
+    child_request b;
+    b.new_tab_req = a;
+    child_req_to_parent new_tab = {CREATE_TAB, b};
+    // Send the struct to ROUTER
+    write(channel.child_to_parent_fd[1], &new_tab, sizeof(&new_tab));
 }
 
 /*
@@ -120,33 +130,19 @@ int controller_process(comm_channel *channel) {
 int router_process() {
 	comm_channel *channel[MAX_TAB];
 	channel[0] = (comm_channel *) malloc(sizeof(comm_channel));
-    // Append your code here
-	// Prepare communication pipes with the CONTROLLER process
-	// Fork the CONTROLLER process
-	//   call controller_process() in the forked CONTROLLER process
-	// Poll child processes' communication channels using non-blocking pipes.
-	//   handle received messages:
-	//     CREATE_TAB:
-	//       Prepare communication pipes with a new URL-RENDERING process
-	//       Fork the new URL-RENDERING process
-	//     NEW_URI_ENTERED:
-	//       Send message to the URL-RENDERING process in which the new url is going to be rendered
-	//     TAB_KILLED:
-	//       If the killed process is the CONTROLLER process, send messages to kill all URL-RENDERING processes
-	//       If the killed process is a URL-RENDERING process, send message to the URL-RENDERING to kill it
-	//   sleep some time if no message received
-	//
+    
     int router_controller[2];
     int pid, flags;
     int proceIndex = 0;
-
+    int read_error;
+    child_req_to_parent *temp = (child_req_to_parent*)malloc(sizeof(child_req_to_parent));   
+ 
     // Create a pipe b/w router and controller
     if (pipe(router_controller) == -1)
     {
         perror("pipe error");
         exit(1);
     }
-
     // Set Non block-read from controller.
     flags = fcntl(router_controller[0], F_GETFL, 0);
     fcntl(router_controller[0], F_SETFL, flags | O_NONBLOCK);
@@ -156,8 +152,15 @@ int router_process() {
     // Parents
     if (pid >  0)
     {
-        wait(NULL);     
-        usleep(1000); // Sleep 1ms
+        while(1)
+        {
+            read_error = read(channel[0] -> child_to_parent_fd[0], temp, sizeof(temp));
+            if (read_error > 0)
+            {
+                printf("%d\n", temp -> type);
+            }
+            usleep(10);
+        }            
     }
     // Child
     else if (pid ==  0)
@@ -169,7 +172,6 @@ int router_process() {
     {
         perror("Fork Error");
     }
-
 	return 0;
 }
 
