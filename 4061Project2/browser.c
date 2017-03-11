@@ -130,8 +130,11 @@ int controller_process(comm_channel *channel) {
 int router_process() {
 	comm_channel *channel[MAX_TAB];
 	channel[0] = (comm_channel *) malloc(sizeof(comm_channel));
+	int tab_index = 1;
+	int channel_index = 1;
     
     int router_controller[2];
+    int router_url[MAX_TAB][2];
     int pid, flags;
     int proceIndex = 0;
     int read_error;
@@ -158,6 +161,35 @@ int router_process() {
             if (read_error > 0)
             {
                 printf("%d\n", temp -> type);
+                if (temp -> type == 0) 
+                {
+                    if (pipe(router_url) == -1)
+                    {
+                        perror("pipe error");
+                        exit(1);
+                    }
+                    // Set Non block-read from controller.
+                    flags = fcntl(router_url[tab_index][0], F_GETFL, 0);
+                    fcntl(outer_url[tab_index][0], F_SETFL, flags | O_NONBLOCK);
+                    channel[tab_index] -> child_to_parent_fd[0] = router_url[tab_index][0];    
+                    channel[tab_index] -> child_to_parent_fd[1] = router_url[tab_index][1];
+                    // This is not good code for now
+                    channel[tab_index] -> parent_to_child_fd[0] = router_url[tab_index+1][0];    
+                    channel[tab_index] -> parent_to_child_fd[1] = router_url[tab_index+1][1];
+                    int new_tab_pid = fork();
+                    if (new_tab_pid > 0) 
+                    {
+                        
+                    }
+                    else if (new_tab_pid == 0) 
+                    {
+                        url_rendering_process(tab_index, channel[tab_index++]);
+                    }
+                    else
+                    {
+                        perror("Fork Error");
+                    }
+                }
             }
             usleep(10);
         }            
