@@ -130,8 +130,11 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	int answer;
 	char received_url[100];
 	while (1) {
+		// This below statement blocks for somereason. IDK WHY
 		// if (read(channel->parent_to_child_fd[0], received_url, sizeof(received_url)) == -1)
-			process_single_gtk_event();
+			// printf("%s\n", received_url);
+		
+		process_single_gtk_event();
 		// else
 		//	render_web_page_in_tab(received_url, b_window);
 		// TAB_KILLED received
@@ -193,7 +196,6 @@ int router_process() {
     if (pid >  0) // parent
     {
 		close(channel[0] -> child_to_parent_fd[1]);	// close write-end pipe
-		
         while(1)
         {	
 			// Iterate through opened pipe channels to check if there are any commands
@@ -225,7 +227,7 @@ int router_process() {
 							
 						case 1:	// Receive url command from controller process
 							printf("receivedURL%s\n", temp -> req.uri_req.uri);
-							// write(channel[temp -> req.uri_req.render_in_tab] -> parent_to_child_fd[1], temp -> req.uri_req.uri, sizeof(temp -> req.uri_req.uri));
+							write(channel[temp -> req.uri_req.render_in_tab] -> parent_to_child_fd[1], temp -> req.uri_req.uri, sizeof(temp -> req.uri_req.uri));
 							break;
 							
 						case 2: // Tab killed command from url process
