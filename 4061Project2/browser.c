@@ -45,7 +45,7 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
     b.uri_req = a;
     child_req_to_parent new_uri = {NEW_URI_ENTERED, b};
     // Send the struct to ROUTER
-    write(channel.child_to_parent_fd[1], &new_uri, sizeof(&new_uri));
+    write(channel.child_to_parent_fd[1], &new_uri, sizeof(child_req_to_parent));
 }
 
 /*
@@ -75,34 +75,29 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
     b.new_tab_req = a;
     child_req_to_parent new_tab = {CREATE_TAB, b};
     // Send the struct to ROUTER
-    write(channel.child_to_parent_fd[1], &new_tab, sizeof(&new_tab));
+    write(channel.child_to_parent_fd[1], &new_tab, sizeof(child_req_to_parent));
 }
 
-/*
- * Name:                router_create_tab
- * Input arguments:     'channel': Includes pipes which new url process will use to 
- *						communicate with Router process
- *						'tab_index: tab index of the new url process
- * Output arguments:    none
- * Function:            This function will make a new url_rendering_process
- */
+
 void router_create_tab(comm_channel *channel, int tab_index)
 {
 	int flags;
-	int new_tab_pid = fork();
-	if (new_tab_pid > 0)  // Parent
+    close(channel -> child_to_parent_fd[1]);
+    close(channel -> parent_to_child_fd[0]);
+    flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
+    fcntl(channel -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
+
+    close(channel -> child_to_parent_fd[0]);
+    close(channel -> parent_to_child_fd[1]);
+    flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
+    fcntl(channel-> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
+    int new_tab_pid = fork();
+	
+    if (new_tab_pid > 0)  // Parent
 	{	
-		close(channel -> child_to_parent_fd[1]);
-		close(channel -> parent_to_child_fd[0]);
-		flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
-		fcntl(channel -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
 	}
 	else if (new_tab_pid == 0) // Child
 	{
-		close(channel -> child_to_parent_fd[0]);
-		close(channel -> parent_to_child_fd[1]);
-		flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
-		fcntl(channel-> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
 		url_rendering_process(tab_index, channel);
 	}
 	else
@@ -126,17 +121,15 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	browser_window * b_window = NULL;
 	// Create url-rendering window
 	create_browser(URL_RENDERING_TAB, tab_index, NULL, NULL, &b_window, channel);
-	child_req_to_parent req;
-	int answer;
-	char received_url[100];
+    child_req_to_parent recBuf;
 	while (1) {
-		// This below statement blocks for somereason. IDK WHY
-		// if (read(channel->parent_to_child_fd[0], received_url, sizeof(received_url)) == -1)
-			// printf("%s\n", received_url);
-		
-		process_single_gtk_event();
-		// else
-		//	render_web_page_in_tab(received_url, b_window);
+		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
+		{
+           render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
+		}
+	    else
+            process_single_gtk_event();		
+
 		// TAB_KILLED received
 		usleep(1000);
 	}
@@ -180,8 +173,8 @@ int router_process() {
     int pid, flags, command_type, i;
 	
 	// buffer to store message
-    child_req_to_parent *temp = (child_req_to_parent*)malloc(sizeof(child_req_to_parent));   
- 
+    child_req_to_parent temp; 
+    
     // Create a pipe b/w router and controller
     if (pipe((channel[0] -> child_to_parent_fd)) == -1)
     {
@@ -199,12 +192,12 @@ int router_process() {
         while(1)
         {	
 			// Iterate through opened pipe channels to check if there are any commands
-			for (i = 0; i < tab_index; i ++)
-            {
-                if (read(channel[i] -> child_to_parent_fd[0], temp, sizeof(temp)) > 0)
+			//for (i = 0; i < tab_index; i ++)
+            //{
+                if (read(channel[0] -> child_to_parent_fd[0], &temp, sizeof(child_req_to_parent)) > 0)
 				{
-					command_type = temp -> type;
-					printf("%i\n", command_type);
+					command_type = temp.type;
+                    printf("command type: %i\n", command_type);
 					switch (command_type)
 					{
 						case 0:	// Receive new tab command from controller process
@@ -222,23 +215,22 @@ int router_process() {
 							
 
 							router_create_tab(channel[tab_index], tab_index);
-							tab_index++;
+                            tab_index++;
 							break;
 							
 						case 1:	// Receive url command from controller process
-							printf("receivedURL%s\n", temp -> req.uri_req.uri);
-							write(channel[temp -> req.uri_req.render_in_tab] -> parent_to_child_fd[1], temp -> req.uri_req.uri, sizeof(temp -> req.uri_req.uri));
+                            write(channel[temp.req.uri_req.render_in_tab]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
 							break;
 							
 						case 2: // Tab killed command from url process
-							
+				
 							break;
 							
 						default:
 							break;
 					}
 				}	
-            }
+            //}
 			
             usleep(1000);
         }            
