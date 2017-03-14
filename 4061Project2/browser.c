@@ -82,22 +82,24 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
 void router_create_tab(comm_channel *channel, int tab_index)
 {
 	int flags;
-    close(channel -> child_to_parent_fd[1]);
-    close(channel -> parent_to_child_fd[0]);
-    flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
-    fcntl(channel -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
 
-    close(channel -> child_to_parent_fd[0]);
-    close(channel -> parent_to_child_fd[1]);
-    flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
-    fcntl(channel-> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
     int new_tab_pid = fork();
 	
     if (new_tab_pid > 0)  // Parent
 	{	
+        close(channel -> child_to_parent_fd[1]);
+        close(channel -> parent_to_child_fd[0]);
+        flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
+        fcntl(channel -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
+        printf("Parent is creating a child tab %i\n",tab_index); 
 	}
 	else if (new_tab_pid == 0) // Child
 	{
+        close(channel -> child_to_parent_fd[0]);
+        close(channel -> parent_to_child_fd[1]);
+        flags = fcntl(channel -> parent_to_child_fd[0], F_GETFL, 0);
+        fcntl(channel-> parent_to_child_fd[0], F_SETFL, flags | O_NONBLOCK);
+        printf("Child is created for tab %i\n", tab_index);
 		url_rendering_process(tab_index, channel);
 	}
 	else
@@ -123,15 +125,15 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	create_browser(URL_RENDERING_TAB, tab_index, NULL, NULL, &b_window, channel);
     child_req_to_parent recBuf;
 	while (1) {
+		usleep(1000);
 		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
 		{
-           render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
-		}
+            printf("URL received in url process");
+            render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
+    	}
 	    else
             process_single_gtk_event();		
-
 		// TAB_KILLED received
-		usleep(1000);
 	}
 	return 0;
 }
