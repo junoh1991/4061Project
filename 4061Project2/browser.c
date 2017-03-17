@@ -131,8 +131,16 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	while (1) {
 		usleep(1000);
 		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
-            render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
-	    else
+        {
+            if (recBuf.type == TAB_KILLED)
+            {
+                process_all_gtk_events();
+                exit(0);
+            }
+            else if (recBuf.type == NEW_URI_ENTERED)
+                render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
+	    }
+        else
             process_single_gtk_event();		
         
 	}
@@ -176,6 +184,7 @@ int router_process() {
     int pid, flags, command_type, i;
     int status = 0;
 	int child_pids[MAX_TAB];
+    int killed_index;
     child_req_to_parent temp; 
     
     // Create a pipe b/w router and controller
@@ -241,16 +250,22 @@ int router_process() {
                         break;
                         
                     case 2: // Tab killed command from url process
-                        if (child_pids[temp.req.killed_req.tab_index] == 0)
+                        if (temp.req.killed_req.tab_index == 0)
                         {
                             printf("Controller closed\n");
                             // From controller. KILL all children processes.
                         }
                         else // From url. Kill only this tab.
                         {
-                            kill(child_pids[temp.req.killed_req.tab_index], SIGKILL);
+                            printf("URL tab closed\n");
+                            killed_index = temp.req.killed_req.tab_index;
+                            write(channel[killed_index]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
+                            waitpid(child_pids[killed_index], &status, 0);
                             printf("child process exited successfully\n");
-                            free(channel[temp.req.uri_req.render_in_tab]);
+                            // Close pipes and free the channel.
+                            close(channel[killed_index] -> child_to_parent_fd[0]);
+                            close(channel[killed_index] -> parent_to_child_fd[1]);
+                            free(channel[killed_index]);
                         }
                         break;
                         
