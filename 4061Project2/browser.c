@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 
 #define MAX_TAB 100
 extern int errno;
@@ -79,7 +80,7 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
 }
 
 
-void router_create_tab(comm_channel *channel, int tab_index)
+int router_create_tab(comm_channel *channel, int tab_index)
 {
 	int flags;
 
@@ -105,7 +106,10 @@ void router_create_tab(comm_channel *channel, int tab_index)
 	else
 	{
 		perror("Fork Error");
+        return -1;
 	}
+
+    return new_tab_pid;
 }
 
 /*
@@ -127,13 +131,10 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	while (1) {
 		usleep(1000);
 		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
-		{
-            printf("URL received in url process");
             render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
-    	}
 	    else
             process_single_gtk_event();		
-		// TAB_KILLED received
+        
 	}
 	return 0;
 }
@@ -173,8 +174,8 @@ int router_process() {
 	
 	int tab_index = 1;
     int pid, flags, command_type, i;
-	
-	// buffer to store message
+    int status = 0;
+	int child_pids[MAX_TAB];
     child_req_to_parent temp; 
     
     // Create a pipe b/w router and controller
@@ -187,58 +188,83 @@ int router_process() {
     flags = fcntl(channel[0] -> child_to_parent_fd[0], F_GETFL, 0);
     fcntl(channel[0] -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
     
-	pid = fork();
-    if (pid >  0) // parent
+	child_pids[0]  = fork();
+    if (child_pids[0]  >  0) // parent
     {
 		close(channel[0] -> child_to_parent_fd[1]);	// close write-end pipe
         while(1)
         {	
 			// Iterate through opened pipe channels to check if there are any commands
-			//for (i = 0; i < tab_index; i ++)
-            //{
-                if (read(channel[0] -> child_to_parent_fd[0], &temp, sizeof(child_req_to_parent)) > 0)
+			for (i = 0; i < tab_index; i ++)
+            {
+                // Check if the tab is closed at this index.
+                if (channel[i] == NULL)
+                    continue;
+    
+                if (read(channel[i] -> child_to_parent_fd[0], &temp, sizeof(child_req_to_parent)) > 0)
 				{
 					command_type = temp.type;
                     printf("command type: %i\n", command_type);
 					switch (command_type)
 					{
-						case 0:	// Receive new tab command from controller process
-							channel[tab_index] = (comm_channel *) malloc(sizeof(comm_channel));
-							if (pipe(channel[tab_index] -> child_to_parent_fd) == -1)
-							{
-								perror("pipe error");
-								break;
-							}
-							if (pipe(channel[tab_index] -> parent_to_child_fd) == -1)
-							{
-								perror("pipe error");
-								break;
-							}
-							
+                    case 0:	// Receive new tab command from controller process
+                        channel[tab_index] = (comm_channel *) malloc(sizeof(comm_channel));
 
-							router_create_tab(channel[tab_index], tab_index);
+                        // Open bidrectional pipe for communication.
+                        if (pipe(channel[tab_index] -> child_to_parent_fd) == -1)
+                        {
+                            perror("pipe error");
+                            break;
+                        }
+                        if (pipe(channel[tab_index] -> parent_to_child_fd) == -1)
+                        {
+                            perror("pipe error");
+                            break;
+                        }
+                        
+                        // Fork.
+                        pid = router_create_tab(channel[tab_index], tab_index);
+                        if (pid == -1)
+                        {
+                            perror("Fork Failed\n");
+                            exit(-1);
+                        }
+                        else
+                        {
+                            child_pids[tab_index] = pid; 
                             tab_index++;
-							break;
-							
-						case 1:	// Receive url command from controller process
-                            write(channel[temp.req.uri_req.render_in_tab]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
-							break;
-							
-						case 2: // Tab killed command from url process
-				
-							break;
-							
-						default:
-							break;
+                        }
+                        break;
+                        
+                    case 1:	// Receive url command from controller process
+                        write(channel[temp.req.uri_req.render_in_tab]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
+                        break;
+                        
+                    case 2: // Tab killed command from url process
+                        if (child_pids[temp.req.killed_req.tab_index] == 0)
+                        {
+                            printf("Controller closed\n");
+                            // From controller. KILL all children processes.
+                        }
+                        else // From url. Kill only this tab.
+                        {
+                            kill(child_pids[temp.req.killed_req.tab_index], SIGKILL);
+                            printf("child process exited successfully\n");
+                            free(channel[temp.req.uri_req.render_in_tab]);
+                        }
+                        break;
+                        
+                    default:
+                        break;
 					}
 				}	
-            //}
+            }
 			
             usleep(1000);
         }            
     }
     // Child process, controller process
-    else if (pid ==  0)
+    else if (child_pids[0] ==  0)
     {     
 		close(channel[0] -> child_to_parent_fd[0]);	// Close read-end of pipe
         controller_process(channel[0]);
