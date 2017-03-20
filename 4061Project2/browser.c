@@ -104,9 +104,9 @@ int router_create_tab(comm_channel *channel, int tab_index)
         close(channel -> parent_to_child_fd[0]);
         flags = fcntl(channel -> child_to_parent_fd[0], F_GETFL, 0);
         fcntl(channel -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
-        #ifdef DEBUG
-            printf("Parent is creating a child tab %i\n",tab_index); 
-        #endif
+    #ifdef DEBUG
+        printf("Parent is creating a child tab %i\n",tab_index); 
+    #endif
 	}
 	else if (new_tab_pid == 0) // Child
 	{
@@ -114,9 +114,9 @@ int router_create_tab(comm_channel *channel, int tab_index)
         close(channel -> parent_to_child_fd[1]);
         flags = fcntl(channel -> parent_to_child_fd[0], F_GETFL, 0);
         fcntl(channel-> parent_to_child_fd[0], F_SETFL, flags | O_NONBLOCK);
-        #ifdef DEBUG
-            printf("Child is created for tab %i\n", tab_index);
-        #endif
+    #ifdef DEBUG
+        printf("Child is created for tab %i\n", tab_index);
+    #endif
 		url_rendering_process(tab_index, channel);
 	}
 	else
@@ -220,15 +220,15 @@ int router_process() {
 			for (i = 0; i < tab_index; i ++)
             {
                 // Check if the tab is closed at this index.
-                if (channel[i] == NULL)
-                    continue;
-    
+                if(child_pids[i]== 0)
+                    continue; 
+
                 if (read(channel[i] -> child_to_parent_fd[0], &temp, sizeof(child_req_to_parent)) > 0)
 				{
 					command_type = temp.type;
-                    #ifdef DEBUG
-                        printf("command type: %i\n", command_type);
-                    #endif
+                #ifdef DEBUG
+                    printf("command type: %i\n", command_type);
+                #endif
 					switch (command_type)
 					{
                     case 0:	// Receive new tab command from controller process
@@ -269,7 +269,7 @@ int router_process() {
                             write(channel[tab_number]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
                         break;
                         
-                    case 2: // Tab killed command from url process
+                    case 2: // Tab killed command from controller or url process 
                         killed_index = temp.req.killed_req.tab_index;
 
                         if (killed_index == 0) // From controller. Kill all url_renering processes
@@ -278,13 +278,24 @@ int router_process() {
                             {
                                 if (child_pids[j] == 0)
                                     continue;
+                                else if (waitpid(child_pids[j], &status, WNOHANG) >  0) // Check if the process is defunct
+                                {
+                                #ifdef DEBUG
+                                    printf("child process at tab %i was a zombie. Cleaned succsfully\n", j);
+                                #endif
+                                    close(channel[j] -> child_to_parent_fd[0]);
+                                    close(channel[j] -> parent_to_child_fd[1]);
+                                    child_pids[j] = 0;
+                                    free(channel[j]);
+                                    continue;
+                                }
                                 else
                                 {
                                     write(channel[j] -> parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
-                                    waitpid(child_pids[j], &status, 0);
-                                    #ifdef DEBUG
-                                        printf("child process exited successfully\n");
-                                    #endif
+                                    waitpid(child_pids[j], &status,0);
+                                #ifdef DEBUG
+                                    printf("child process at tab %i  exited successfully\n", j );
+                                #endif
                                     // Close pipes and free the channel.
                                     close(channel[j] -> child_to_parent_fd[0]);
                                     close(channel[j] -> parent_to_child_fd[1]);
@@ -303,9 +314,9 @@ int router_process() {
                         {
                             write(channel[killed_index]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
                             waitpid(child_pids[killed_index], &status, 0);
-                            #ifdef DEBUG
-                                printf("child process exited successfully\n");
-                            #endif
+                        #ifdef DEBUG
+                            printf("child process exited successfully\n");
+                        #endif
                             // Close pipes and free the channel.
                             close(channel[killed_index] -> child_to_parent_fd[0]);
                             close(channel[killed_index] -> parent_to_child_fd[1]);
