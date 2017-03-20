@@ -3,13 +3,19 @@
 * name: Ari Bible, Tristan Mansfield, Jun Oh
 * id: bible012, mansf043, ohxxx371 */
 
-1. Who did what
+1. Who did what:
+    Ari:      URL-Rendering, readme
+    Tristan:  Controller
+    Jun:      Router, readme
 
-2. How to compile the program
+2. How to compile the program:
+    
+    Use the included makefile.     ex: $ make
+    
+3. How to use the program from the shell (syntax):
+    Call make to build targets.    ex: $ make
+    Then, run browser executable.  ex: $ ./browser
 
-3. How to use the program from the shell (syntax)
-  Call make to build targets.
-  Then, run browser executable.
-
-4. Any explicit assumptions you have made
-  When a url tab is closed, it won't be used again.
+4. Any explicit assumptions you have made:
+    When a url tab is closed, it won't be used again.
+    Other assumptions are as specified in the project 2 description.
