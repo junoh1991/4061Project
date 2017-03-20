@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 #define MAX_TAB 100
-#define DEBUG
+// #define DEBUG
 extern int errno;
 
 /*
