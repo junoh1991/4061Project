@@ -1,3 +1,8 @@
+/* CSci4061 S2017 Assignment 2
+* date: 3/20/2017
+* name: Ari Bible, Tristan Mansfield, Jun Oh
+* id: bible012, mansf043, ohxxx371 */
+
 #include "wrapper.h"
 #include <sys/types.h>
 #include <unistd.h>
