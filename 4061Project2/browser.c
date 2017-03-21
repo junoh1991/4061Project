@@ -3,6 +3,7 @@
 * name: Ari Bible, Tristan Mansfield, Jun Oh
 * id: bible012, mansf043, ohxxx371 */
 
+// include files
 #include "wrapper.h"
 #include <sys/types.h>
 #include <unistd.h>
@@ -14,13 +15,13 @@
 #include <unistd.h>
 
 #define MAX_TAB 100
-// #define DEBUG
+
 extern int errno;
 
 /*
  * Name:                uri_entered_cb
- * Input arguments:     'entry'-address bar where the url was entered
- *                      'data'-auxiliary data sent along with the event
+ * Input arguments:     'entry': address bar where the url was entered
+ *                      'data': auxiliary data sent along with the event
  * Output arguments:    none
  * Function:            When the user hits the enter after entering the url
  *                      in the address bar, 'activate' event is generated
@@ -34,17 +35,17 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
         return;
     }
     browser_window *b_window = (browser_window *)data;
-    // This channel have pipes to communicate with ROUTER. 
+    // This channel has pipes to communicate with ROUTER 
     comm_channel channel = ((browser_window*)data)->channel;
-    // Get the tab index where the URL is to be rendered
+    // Get tab index where URL is to be rendered
     int tab_index = query_tab_id_for_request(entry, data);
     if(tab_index <= 0) {
         fprintf(stderr, "Invalid tab index (%d).", tab_index);
         return;
     }
-    // Get the URL.
+    // Get URL
     char * uri = get_entered_uri(entry);
-    // Create struct with information for creating new tab
+    // Create struct with info for creating new tab
     new_uri_req a;
     strcpy(a.uri, uri);
     a.render_in_tab = tab_index;
@@ -57,8 +58,8 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
 
 /*
  * Name:                create_new_tab_cb
- * Input arguments:     'button' - whose click generated this callback
- *                      'data' - auxillary data passed along for handling
+ * Input arguments:     'button': whose click generated this callback
+ *                      'data': auxillary data passed along for handling
  *                      this event.
  * Output arguments:    none
  * Function:            This is the callback function for the 'create_new_tab'
@@ -74,14 +75,14 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
         return;
     }
     browser_window *b_window = (browser_window *)data;
-    // This channel have pipes to communicate with ROUTER. 
+    // This channel has pipes to communicate with ROUTER.
     comm_channel channel = ((browser_window*)data)->channel;  
-    // Create struct with information for creating new tab
+    // Create struct with info for creating new tab
     create_new_tab_req a;
     child_request b;
     b.new_tab_req = a;
     child_req_to_parent new_tab = {CREATE_TAB, b};
-    // Send the struct to ROUTER
+    // Send struct to ROUTER
     write(channel.child_to_parent_fd[1], &new_tab, sizeof(child_req_to_parent));
 }
 
@@ -89,10 +90,8 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
  * Name:                router_create_tab
  * Input arguments:     'channel': Includes pipes to communicate with Router process
  *                      'tab_index': the tab number of the new url_rendering process
- *
  * Output arguments:    '-1' : fork error
  *                      >0: pid of the forked child
- *
  * Function:            Thsi function forks to create a url_rendering process. 
  *                      Will close appropirate pipe channels for parent and child. 
  *                      Child process calls  url_rendering_process
@@ -167,10 +166,10 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 	}
 	return 0;
 }
+
 /*
  * Name:                controller_process
- * Input arguments:     'channel': Includes pipes to communctaion with
- *                      Router process
+ * Input arguments:     'channel': Includes pipes to communctaion with Router
  * Output arguments:    none
  * Function:            This function will make a CONTROLLER window and 
  *                      be blocked until the program terminates.
@@ -186,13 +185,12 @@ int controller_process(comm_channel *channel) {
 	return 0;
 }
 
-
-
 /*
  * Name:                router_process
  * Input arguments:     none
  * Output arguments:    none
- * Function:            This function will make a CONTROLLER window and be blocked until the program terminate.
+ * Function:            This function will make a CONTROLLER window and be blocked
+ *			until the program terminates.
  */
 int router_process() {
 	comm_channel *channel[MAX_TAB];
@@ -205,13 +203,13 @@ int router_process() {
     int killed_index, tab_number;
     child_req_to_parent temp; 
     
-    // Create a pipe b/w router and controller
+    // Create pipe between router and controller
     if (pipe((channel[0] -> child_to_parent_fd)) == -1)
     {
         perror("pipe error");
         exit(1);
     }
-    // Set Non block-read from controller.
+    // Set non-blocking read from controller
     flags = fcntl(channel[0] -> child_to_parent_fd[0], F_GETFL, 0);
     fcntl(channel[0] -> child_to_parent_fd[0], F_SETFL, flags | O_NONBLOCK);
     
@@ -221,10 +219,10 @@ int router_process() {
 		close(channel[0] -> child_to_parent_fd[1]);	// close write-end pipe
         while(1)
         {	
-			// Iterate through opened pipe channels to check if there are any commands
+			// Iterate through opened pipe channels to check for any commands
 			for (i = 0; i < tab_index; i ++)
             {
-                // Check if the tab is closed at this index.
+                // Check if the tab is closed at index
                 if(child_pids[i]== 0)
                     continue; 
 
@@ -239,7 +237,7 @@ int router_process() {
                     case 0:	// Receive new tab command from controller process
                         channel[tab_index] = (comm_channel *) malloc(sizeof(comm_channel));
 
-                        // Open bidrectional pipe for communication.
+                        // Open bidrectional pipe for communication
                         if (pipe(channel[tab_index] -> child_to_parent_fd) == -1)
                         {
                             perror("pipe error");
@@ -251,7 +249,7 @@ int router_process() {
                             break;
                         }
                         
-                        // Fork.
+                        // Fork
                         pid = router_create_tab(channel[tab_index], tab_index);
                         if (pid == -1)
                         {
@@ -265,7 +263,7 @@ int router_process() {
                         }
                         break;
                         
-                    case 1:	// Receive url command from controller process
+                    case 1:	// URL command from controller
                         // Verify tab number
                         tab_number = temp.req.uri_req.render_in_tab;
                         if (tab_number >=  tab_index || child_pids[tab_number] == 0)
@@ -283,7 +281,7 @@ int router_process() {
                             {
                                 if (child_pids[j] == 0)
                                     continue;
-                                else if (waitpid(child_pids[j], &status, WNOHANG) >  0) // Check if the process is defunct
+                                else if (waitpid(child_pids[j], &status, WNOHANG) >  0) // Check if process defunct
                                 {
                                 #ifdef DEBUG
                                     printf("child process at tab %i was a zombie. Cleaned succsfully\n", j);
@@ -301,28 +299,28 @@ int router_process() {
                                 #ifdef DEBUG
                                     printf("child process at tab %i  exited successfully\n", j );
                                 #endif
-                                    // Close pipes and free the channel.
+                                    // Close pipes, free channel
                                     close(channel[j] -> child_to_parent_fd[0]);
                                     close(channel[j] -> parent_to_child_fd[1]);
                                     child_pids[j] = 0;
                                     free(channel[j]);
                                 } 
                             }
-                            // Free controller process stuffs.
+                            // Free controller process stuffs
                             close(channel[0] -> child_to_parent_fd[0]);
                             close(channel[0] -> child_to_parent_fd[1]); 
                             free(channel[0]);
                             waitpid(child_pids[0], &status, 0);
                             exit(0);
                         }
-                        else // From url. Kill only this tab.
+                        else // From url. Kill this tab
                         {
                             write(channel[killed_index]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
                             waitpid(child_pids[killed_index], &status, 0);
                         #ifdef DEBUG
                             printf("child process exited successfully\n");
                         #endif
-                            // Close pipes and free the channel.
+                            // Close pipes, free channel
                             close(channel[killed_index] -> child_to_parent_fd[0]);
                             close(channel[killed_index] -> parent_to_child_fd[1]);
                             child_pids[killed_index] = 0;
@@ -357,26 +355,3 @@ int router_process() {
 int main() {
 	return router_process();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
