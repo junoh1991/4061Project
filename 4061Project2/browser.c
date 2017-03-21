@@ -20,15 +20,14 @@ extern int errno;
 
 /*
  * Name:                uri_entered_cb
- * Input arguments:     'entry': address bar where the url was entered
- *                      'data': auxiliary data sent along with the event
+ * Input arguments:     'entry': address bar where url was entered
+ *                      'data': auxiliary data sent with event
  * Output arguments:    none
- * Function:            When the user hits the enter after entering the url
- *                      in the address bar, 'activate' event is generated
- *                      for the Widget Entry, for which 'uri_entered_cb'
- *                      callback is called. Controller-tab captures this event
- *                      and sends the browsing request to the ROUTER (parent)
- *                      process.
+ * Function:            When the user hits enter after entering url in
+ *                      address bar, 'activate' event is generated for the
+ *                      Widget Entry, for which 'uri_entered_cb' callback is
+ *                      called. Controller-tab captures this event and sends
+ *                      browsing request to the parent ROUTER process.
  */
 void uri_entered_cb(GtkWidget* entry, gpointer data) {
     if(data == NULL) {	
@@ -63,11 +62,11 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
  *                      this event.
  * Output arguments:    none
  * Function:            This is the callback function for the 'create_new_tab'
- *                      event which is generated when the user clicks the '+'
- *                      button in the controller-tab. The controller-tab
- *                      redirects the request to the ROUTER (parent) process
- *                      which then creates a new child process for creating
- *                      and managing this new tab.
+ *                      event generated when the user clicks '+' botton in the
+ *                      controller-tab. The controller-tab redirects the
+ *                      request to the ROUTER (parent) process which then 
+ *                      creates a new child process for creating and managing
+ *                      this new tab.
  */ 
 void create_new_tab_cb(GtkButton *button, gpointer data)
 {
@@ -88,13 +87,13 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
 
 /*
  * Name:                router_create_tab
- * Input arguments:     'channel': Includes pipes to communicate with Router process
+ * Input arguments:     'channel': includes pipes to communicate with router process
  *                      'tab_index': the tab number of the new url_rendering process
  * Output arguments:    '-1' : fork error
  *                      >0: pid of the forked child
- * Function:            Thsi function forks to create a url_rendering process. 
+ * Function:            This function forks to create a url_rendering process. 
  *                      Will close appropirate pipe channels for parent and child. 
- *                      Child process calls  url_rendering_process
+ *                      Child process calls  url_rendering_process.
 */
 int router_create_tab(comm_channel *channel, int tab_index)
 {
@@ -135,13 +134,12 @@ int router_create_tab(comm_channel *channel, int tab_index)
 /*
  * Name:                url_rendering_process
  * Input arguments:     'tab_index': URL-RENDERING tab index
- *                      'channel': Includes pipes to communctaion with
- *                      Router process
+ *                      'channel': includes pipes to communctaion with router process
  * Output arguments:    none
- * Function:            This function will make a URL-RENDRERING tab Note.
- *                      You need to use below functions to handle tab event. 
- *                      1. process_all_gtk_events();
- *                      2. process_single_gtk_event();
+ * Function:            This function will make a URL-RENDRERING tab note.
+ *                      Use these functions to handle tab event:
+ *                        1. process_all_gtk_events();
+ *                        2. process_single_gtk_event();
 */
 int url_rendering_process(int tab_index, comm_channel *channel) {
 	browser_window * b_window = NULL;
@@ -169,10 +167,10 @@ int url_rendering_process(int tab_index, comm_channel *channel) {
 
 /*
  * Name:                controller_process
- * Input arguments:     'channel': Includes pipes to communctaion with Router
+ * Input arguments:     'channel': includes pipes to communctaion with router process
  * Output arguments:    none
- * Function:            This function will make a CONTROLLER window and 
- *                      be blocked until the program terminates.
+ * Function:            This function will make a CONTROLLER window and be
+ *                      blocked until the program terminates.
  */
 int controller_process(comm_channel *channel) {
 	// Do not need to change code in this function
@@ -189,8 +187,8 @@ int controller_process(comm_channel *channel) {
  * Name:                router_process
  * Input arguments:     none
  * Output arguments:    none
- * Function:            This function will make a CONTROLLER window and be blocked
- *			until the program terminates.
+ * Function:            This function will make a CONTROLLER window and be
+ *			blocked until the program terminates.
  */
 int router_process() {
 	comm_channel *channel[MAX_TAB];
