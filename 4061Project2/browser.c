@@ -33,7 +33,6 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
     if(data == NULL) {	
         return;
     }
-    browser_window *b_window = (browser_window *)data;
     // This channel has pipes to communicate with ROUTER 
     comm_channel channel = ((browser_window*)data)->channel;
     // Get tab index where URL is to be rendered
@@ -52,7 +51,10 @@ void uri_entered_cb(GtkWidget* entry, gpointer data) {
     b.uri_req = a;
     child_req_to_parent new_uri = {NEW_URI_ENTERED, b};
     // Send the struct to ROUTER
-    write(channel.child_to_parent_fd[1], &new_uri, sizeof(child_req_to_parent));
+    if(write(channel.child_to_parent_fd[1], &new_uri, sizeof(child_req_to_parent)) < 0)
+    {
+        fprintf(stderr, "Failed to write to router process in url entered callback function (%s).", uri);
+    }
 }
 
 /*
@@ -73,7 +75,6 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
     if(data == NULL) {
         return;
     }
-    browser_window *b_window = (browser_window *)data;
     // This channel has pipes to communicate with ROUTER.
     comm_channel channel = ((browser_window*)data)->channel;  
     // Create struct with info for creating new tab
@@ -82,7 +83,44 @@ void create_new_tab_cb(GtkButton *button, gpointer data)
     b.new_tab_req = a;
     child_req_to_parent new_tab = {CREATE_TAB, b};
     // Send struct to ROUTER
-    write(channel.child_to_parent_fd[1], &new_tab, sizeof(child_req_to_parent));
+    if(write(channel.child_to_parent_fd[1], &new_tab, sizeof(child_req_to_parent)) < 0)
+    {
+        perror("Failed to write to router process in create new tab callback function.");
+    }
+}
+
+/*
+ * Name:                url_rendering_process
+ * Input arguments:     'tab_index': URL-RENDERING tab index
+ *                      'channel': includes pipes to communctaion with router process
+ * Output arguments:    none
+ * Function:            This function will make a URL-RENDRERING tab note.
+ *                      Use these functions to handle tab event:
+ *                        1. process_all_gtk_events();
+ *                        2. process_single_gtk_event();
+*/
+int url_rendering_process(int tab_index, comm_channel *channel) {
+	browser_window * b_window = NULL;
+	// Create url-rendering window
+	create_browser(URL_RENDERING_TAB, tab_index, NULL, NULL, &b_window, channel);
+    child_req_to_parent recBuf;
+	while (1) {
+		usleep(1000);
+		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
+        {
+            if (recBuf.type == TAB_KILLED)
+            {
+                process_all_gtk_events();
+                exit(0);
+            }
+            else if (recBuf.type == NEW_URI_ENTERED)
+                render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
+	    }
+        else
+            process_single_gtk_event();		
+        
+	}
+	return 0;
 }
 
 /*
@@ -129,40 +167,6 @@ int router_create_tab(comm_channel *channel, int tab_index)
 	}
 
     return new_tab_pid;
-}
-
-/*
- * Name:                url_rendering_process
- * Input arguments:     'tab_index': URL-RENDERING tab index
- *                      'channel': includes pipes to communctaion with router process
- * Output arguments:    none
- * Function:            This function will make a URL-RENDRERING tab note.
- *                      Use these functions to handle tab event:
- *                        1. process_all_gtk_events();
- *                        2. process_single_gtk_event();
-*/
-int url_rendering_process(int tab_index, comm_channel *channel) {
-	browser_window * b_window = NULL;
-	// Create url-rendering window
-	create_browser(URL_RENDERING_TAB, tab_index, NULL, NULL, &b_window, channel);
-    child_req_to_parent recBuf;
-	while (1) {
-		usleep(1000);
-		if (read(channel->parent_to_child_fd[0], &recBuf, sizeof(child_req_to_parent)) > 0)
-        {
-            if (recBuf.type == TAB_KILLED)
-            {
-                process_all_gtk_events();
-                exit(0);
-            }
-            else if (recBuf.type == NEW_URI_ENTERED)
-                render_web_page_in_tab(recBuf.req.uri_req.uri, b_window); 
-	    }
-        else
-            process_single_gtk_event();		
-        
-	}
-	return 0;
 }
 
 /*
@@ -267,7 +271,10 @@ int router_process() {
                         if (tab_number >=  tab_index || child_pids[tab_number] == 0)
                             perror("Wrong tab number");
                         else
-                            write(channel[tab_number]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
+                            if (write(channel[tab_number]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent)) < 0)
+                            {
+                                perror("Failed to write to url rendering process from router process (change url command).");
+                            }
                         break;
                         
                     case 2: // Tab killed command from controller or url process 
@@ -292,7 +299,10 @@ int router_process() {
                                 }
                                 else
                                 {
-                                    write(channel[j] -> parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
+                                    if (write(channel[j] -> parent_to_child_fd[1], &temp, sizeof(child_req_to_parent)) < 0)
+                                    {
+                                        perror("Failed to write to url rendering process from router process (tab killed command from controller process).");
+                                    }
                                     waitpid(child_pids[j], &status,0);
                                 #ifdef DEBUG
                                     printf("child process at tab %i  exited successfully\n", j );
@@ -313,7 +323,10 @@ int router_process() {
                         }
                         else // From url. Kill this tab
                         {
-                            write(channel[killed_index]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent));
+                            if (write(channel[killed_index]->parent_to_child_fd[1], &temp, sizeof(child_req_to_parent)) < 0)
+                            {
+                                perror("Failed to write to url rendering process from router process (tab killed command from url process).");
+                            }
                             waitpid(child_pids[killed_index], &status, 0);
                         #ifdef DEBUG
                             printf("child process exited successfully\n");
@@ -336,7 +349,7 @@ int router_process() {
             usleep(1000);
         }            
     }
-    // Child process, controller process
+    // Child process becomes controller process
     else if (child_pids[0] ==  0)
     {     
 		close(channel[0] -> child_to_parent_fd[0]);	// Close read-end of pipe
