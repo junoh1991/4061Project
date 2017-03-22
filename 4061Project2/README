@@ -6,7 +6,7 @@
 1. Who did what:
     Ari:      URL-Rendering, syntax checking, readme
     Tristan:  Controller, error handling
-    Jun:      Router, readme
+    Jun:      Router, URL-Rendering, readme
 
 2. How to compile the program:
     
