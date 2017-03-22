@@ -4,8 +4,8 @@
 * id: bible012, mansf043, ohxxx371 */
 
 1. Who did what:
-    Ari:      URL-Rendering, readme
-    Tristan:  Controller
+    Ari:      URL-Rendering, syntax checking, readme
+    Tristan:  Controller, error handling
     Jun:      Router, readme
 
 2. How to compile the program:
@@ -19,3 +19,4 @@
 4. Any explicit assumptions you have made:
     When a url tab is closed, it won't be used again.
     Other assumptions are as specified in the project 2 description.
+    When an invalid url is entered, it is assumed that no error message is required.
