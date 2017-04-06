@@ -1,6 +1,7 @@
 #include <stdio.h>
-
+#include <stdlib.h>
 #include "mm.h"
+#define DEBUG
 
 /* Return usec */
 double comp_time(struct timeval time_s, struct timeval time_e) {
@@ -19,20 +20,60 @@ double comp_time(struct timeval time_s, struct timeval time_e) {
 
 /* TODO - Implement.  Return 0 for success, or -1 and set errno on fail. */
 int mm_init(mm_t *mm, int hm, int sz) {
-  return 0;  /* TODO - return the right value */
+    int i;
+
+    // Allocate stack for 'put' memory
+    mm->headRef = (chunk_t*) malloc(sizeof(chunk_t));
+    mm->headRef->next = NULL;
+
+    // Allocate blocks of memory
+    mm->lastIndex = 0;
+    mm->chunk =(chunk_t*) malloc(sizeof(chunk_t) *hm);
+    for (i = 0; i < hm; i++)
+        mm->chunk[i].arr =  malloc(sizeof(void) *sz);
+#ifdef DEBUG
+    printf("Start Address: %p, End Address: %p\n", mm->chunk[0].arr, mm->chunk[--i].arr);
+#endif     
+    return 0;  /* TODO - return the right value */
 }
 
 /* TODO - Implement */
 void *mm_get(mm_t *mm) {
-  return NULL;  /* TODO - return the right value */
+    int index;
+    chunk_t *temp;
+    // Check released stack first.
+    if ((mm->headRef->next) != NULL)
+    {
+        temp = mm->headRef->next;
+        mm->chunk[temp->index].status = FULL;
+        (mm->headRef->next) = temp->next;
+        temp->next = NULL;
+        return (void*)temp;     
+    }
+
+    else
+    {
+        index = mm->lastIndex++;
+        mm->chunk[index].status = FULL;
+        return (void*) mm->chunk[index].arr; 
+    }
 }
 
 /* TODO - Implement */
 void mm_put(mm_t *mm, void *chunk) {
+    chunk_t* temp = (chunk_t*) chunk;
+    temp->status = EMPTY;
+    if(mm->headRef->next != NULL)
+        temp->next = mm->headRef->next;
+    mm->headRef->next = temp; 
+#ifdef DEBUG
+    printf("freed chunk address: %p\n", *(mm->headRef));    
+#endif
 }
 
 /* TODO - Implement */
 void mm_release(mm_t *mm) {
+    free(mm->chunk);
 }
 
 /*
