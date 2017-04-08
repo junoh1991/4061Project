@@ -71,11 +71,20 @@ static void packet_sender(int sig) {
   temp[3] = '\0';
   printf ("Sending packet: %s\n", temp);
   pkt_cnt++;
-
-  // TODO Create a packet_queue_msg for the current packet.
-  // TODO send this packet_queue_msg to the receiver. Handle any error appropriately.
-  // TODO send SIGIO to the receiver if message sending was successful.
   
+  // TODO Create a packet_queue_msg for the current packet.
+  packet_queue_msg msg;
+  msg.mtype = QUEUE_MSG_TYPE;
+  msg.pkt = pkt;
+   
+  // TODO send this packet_queue_msg to the receiver. Handle any error appropriately.
+  if(msgsnd(msqid, (void *) &msg, sizeof (packet_queue_msg), 0) == -1) {
+    perror("Message send failed");
+    exit(-1);
+  }
+  
+  // TODO send SIGIO to the receiver if message sending was successful.
+  kill(receiver_pid, SIGIO);
 }
 
 int main(int argc, char **argv) {
@@ -94,9 +103,12 @@ int main(int argc, char **argv) {
   struct sigaction act;           
 
   /* TODO Create a message queue */ 
- 
-  /*  TODO read the receiver pid from the queue and store it for future use*/
+  msqid = msgget(key, 0666 | IPC_CREAT);
   
+  /* TODO read the receiver pid from the queue and store it for future use*/
+  pid_queue_msg msg;
+  msgrcv(msqid, (void *) &msg, sizeof (pid_queue_msg), QUEUE_MSG_TYPE, 0);
+  receiver_pid = msg.pid;
   printf("Got pid : %d\n", receiver_pid);
  
   /* TODO - set up alarm handler -- mask all signals within it */
@@ -104,12 +116,19 @@ int main(int argc, char **argv) {
    * Don't care about the old mask, and SIGALRM will be blocked for us anyway,
    * but we want to make sure act is properly initialized.
    */
-
+  act.sa_handler = packet_sender;
+  sigfillset(&act.sa_mask);
+  sigaction(SIGALRM, &act, NULL);
+  
   /*  
    * TODO - turn on alarm timer ...
    * use  INTERVAL and INTERVAL_USEC for sec and usec values
   */
-
+  interval.it_interval.tv_sec = INTERVAL;
+  interval.it_interval.tv_usec = INTERVAL_USEC;
+  interval.it_value.tv_sec = INTERVAL;
+  interval.it_value.tv_usec = INTERVAL_USEC;
+  setitimer(ITIMER_REAL, &interval, NULL);
 
   /* And the timer */
 

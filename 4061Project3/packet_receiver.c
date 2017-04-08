@@ -22,9 +22,12 @@ static void packet_handler(int sig) {
   void *chunk;
       
   // TODO get the "packet_queue_msg" from the queue.
-
+  packet_queue_msg msg;
+  msgrcv(msqid, (void *) &msg, sizeof (packet_queue_msg), QUEUE_MSG_TYPE, 0);
 
   // TODO extract the packet from "packet_queue_msg" and store it in the memory from memory manager
+  pkt = msg.pkt;
+  mm_put(&mm, chunk);
 }
 
 /*
@@ -59,14 +62,24 @@ int main(int argc, char **argv) {
   char *msg;
 
   /* TODO - init memory manager for NUM_CHUNKS chunks of size CHUNK_SIZE each */
-
+  mm_init(&mm, NUM_CHUNKS, CHUNK_SIZE);
   message.num_packets = 0;
 
   /* TODO initialize msqid to send pid and receive messages from the message queue. Use the key in packet.h */
+  msqid = msgget(key, 0666 | IPC_CREAT);
   
   /* TODO send process pid to the sender on the queue */
+  int pid = getpid();
+  pid_queue_msg pid_msg;
+  pid_msg.pid = pid;
+  pid_msg.mtype = QUEUE_MSG_TYPE;
+  msgsnd(msqid, (void *) &pid_msg, sizeof(pid_queue_msg), 0);
   
   /* TODO set up SIGIO handler to read incoming packets from the queue. Check packet_handler()*/
+  struct sigaction act;
+  act.sa_handler = packet_handler;
+  sigfillset(&act.sa_mask);
+  sigaction(SIGIO, &act, NULL);
 
   for (i = 1; i <= k; i++) {
     while (pkt_cnt < pkt_total) {
@@ -84,8 +97,10 @@ int main(int argc, char **argv) {
   }
 
   // TODO deallocate memory manager
+  mm_release(&mm);
 
   // TODO remove the queue once done
+  msgctl(msqid, IPC_RMID, 0);
   
   return EXIT_SUCCESS;
 }
