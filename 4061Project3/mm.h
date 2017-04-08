@@ -6,24 +6,22 @@
 
 #define INTERVAL 0
 #define INTERVAL_USEC 50000
-#define CHUNK_SIZE 64
+#define CHUNK_SIZE 64 
 #define NUM_CHUNKS 1000000
 #define EMPTY 0  
 #define FULL 1
 
 
 /* TODO - Fill this in */
-typedef struct chunk{
+struct chunk_t{
     void* arr;
-    uint8_t status;
-    int index;
-    struct chunk *next;
-} chunk_t;
+    struct chunk_t *next;
+};
 
 typedef struct {
     int lastIndex;
-    chunk_t *headRef;
-    chunk_t *chunk;
+    struct chunk_t *headRef;
+    struct chunk_t *chunk;
 } mm_t;
 
 /* TODO - Implement these in mm.c */
