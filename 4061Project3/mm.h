@@ -8,18 +8,21 @@
 #define INTERVAL_USEC 50000
 #define CHUNK_SIZE 64 
 #define NUM_CHUNKS 1000000
-#define EMPTY 0  
-#define FULL 1
+#define FREE 0  
+#define TAKEN 1
 
 
 /* TODO - Fill this in */
 struct chunk_t{
     void* arr;
+    uint8_t *status;
     struct chunk_t *next;
 };
 
 typedef struct {
     int lastIndex;
+    int howMany;
+    int offset;
     struct chunk_t *headRef;
     struct chunk_t *chunk;
 } mm_t;
