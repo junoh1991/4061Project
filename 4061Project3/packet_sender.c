@@ -45,7 +45,6 @@ static packet_t get_packet() {
       }
       i = (i + 1) % how_many;
     } 
-
   }
   pkt.how_many = how_many;
   pkt.which = which;
@@ -76,9 +75,8 @@ static void packet_sender(int sig) {
   packet_queue_msg msg;
   msg.mtype = QUEUE_MSG_TYPE;
   msg.pkt = pkt;
-   
   // TODO send this packet_queue_msg to the receiver. Handle any error appropriately.
-  if(msgsnd(msqid, (void *) &msg, sizeof (packet_queue_msg), 0) == -1) {
+  if(msgsnd(msqid, (void *) &msg, sizeof(packet_t), 0) == -1) {
     perror("Message send failed");
     exit(-1);
   }
@@ -106,8 +104,9 @@ int main(int argc, char **argv) {
   msqid = msgget(key, 0666 | IPC_CREAT);
   
   /* TODO read the receiver pid from the queue and store it for future use*/
+  printf("Waiting for receiver pid.\n");
   pid_queue_msg msg;
-  msgrcv(msqid, (void *) &msg, sizeof (pid_queue_msg), QUEUE_MSG_TYPE, 0);
+  msgrcv(msqid, (void *) &msg, sizeof (int), QUEUE_MSG_TYPE, 0);
   receiver_pid = msg.pid;
   printf("Got pid : %d\n", receiver_pid);
  

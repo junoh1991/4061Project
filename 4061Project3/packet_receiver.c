@@ -19,15 +19,17 @@ static int pkt_total = 1;   /* how many packets to be received for the message *
  */
 static void packet_handler(int sig) {
   packet_t pkt;
-  void *chunk;
+  void * chunk;
       
   // TODO get the "packet_queue_msg" from the queue.
   packet_queue_msg msg;
-  msgrcv(msqid, (void *) &msg, sizeof (packet_queue_msg), QUEUE_MSG_TYPE, 0);
-
+  msgrcv(msqid, (void *) &msg, sizeof(packet_t), QUEUE_MSG_TYPE, 0);
   // TODO extract the packet from "packet_queue_msg" and store it in the memory from memory manager
   pkt = msg.pkt;
-  mm_put(&mm, chunk);
+  printf("%d, %d, %s\n", pkt.how_many, pkt.which, pkt.data);
+  chunk = mm_get(&mm);
+  memcpy(chunk, (void *) &pkt, sizeof(pkt));
+  message.data[message.num_packets++] = chunk;
 }
 
 /*
@@ -36,13 +38,18 @@ static void packet_handler(int sig) {
  */
 static char *assemble_message() {
 
-  char *msg;
+  void * msg;
   int i;
   int msg_len = message.num_packets * sizeof(data_t);
 
   /* TODO - Allocate msg and assemble packets into it */
-
-
+  msg = (void *) malloc(msg_len);
+  packet_t * temp;
+  for(i = 0; i < message.num_packets; i++) {
+    temp = (packet_t *) message.data[i];
+    memcpy(msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
+  }
+  
   /* reset these for next message */
   pkt_total = 1;
   pkt_cnt = 0;
@@ -63,6 +70,7 @@ int main(int argc, char **argv) {
 
   /* TODO - init memory manager for NUM_CHUNKS chunks of size CHUNK_SIZE each */
   mm_init(&mm, NUM_CHUNKS, CHUNK_SIZE);
+
   message.num_packets = 0;
 
   /* TODO initialize msqid to send pid and receive messages from the message queue. Use the key in packet.h */
@@ -73,7 +81,7 @@ int main(int argc, char **argv) {
   pid_queue_msg pid_msg;
   pid_msg.pid = pid;
   pid_msg.mtype = QUEUE_MSG_TYPE;
-  msgsnd(msqid, (void *) &pid_msg, sizeof(pid_queue_msg), 0);
+  msgsnd(msqid, (void *) &pid_msg, sizeof(int), 0);
   
   /* TODO set up SIGIO handler to read incoming packets from the queue. Check packet_handler()*/
   struct sigaction act;
@@ -86,7 +94,7 @@ int main(int argc, char **argv) {
       pause(); /* block until next packet */
     }
   
-    msg = assemble_message();
+    msg = (char *) assemble_message();
     if (msg == NULL) {
       perror("Failed to assemble message");
     }

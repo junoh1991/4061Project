@@ -1,10 +1,6 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#define INTERVAL 0
-// Interval for timer. Interval you need to send the packets to the receiver
-#define INTERVAL_USEC 500000
-
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +21,7 @@ typedef char data_t[PACKET_SIZE];
 
 typedef struct {
   int how_many; /* number of packets in the message */
-  int seqnum;   /* sequence number for the packet in the message */
+  int which;   /* sequence number for the packet in the message */
   data_t data;  /* packet data */
 } packet_t;
 
