@@ -3,6 +3,7 @@
 #include "mm.h"
 //#define DEBUG
 
+
 /* Return usec */
 double comp_time(struct timeval time_s, struct timeval time_e) {
 
@@ -93,6 +94,7 @@ void mm_put(mm_t *mm, void *chunk) {
         *status = FREE;
     temp->arr = NULL;
 
+    // If headRef's next poitner is null, we know the stack is empty
     if(mm->headRef->next != NULL)
         temp->next = mm->headRef->next;
     mm->headRef->next = temp; 

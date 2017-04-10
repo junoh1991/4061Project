@@ -6,7 +6,7 @@
 
 #define INTERVAL 0
 #define INTERVAL_USEC 50000
-#define CHUNK_SIZE 64 
+#define CHUNK_SIZE 16 
 #define NUM_CHUNKS 1000000
 #define FREE 0  
 #define TAKEN 1
