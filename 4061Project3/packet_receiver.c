@@ -26,10 +26,12 @@ static void packet_handler(int sig) {
   msgrcv(msqid, (void *) &msg, sizeof(packet_t), QUEUE_MSG_TYPE, 0);
   // TODO extract the packet from "packet_queue_msg" and store it in the memory from memory manager
   pkt = msg.pkt;
-  printf("%d, %d, %s\n", pkt.how_many, pkt.which, pkt.data);
+  //printf("%d, %d, %s\n", pkt.how_many, pkt.which, pkt.data);
   chunk = mm_get(&mm);
   memcpy(chunk, (void *) &pkt, sizeof(pkt));
   message.data[message.num_packets++] = chunk;
+  pkt_cnt++;
+  pkt_total = pkt.how_many;
 }
 
 /*
@@ -37,7 +39,6 @@ static void packet_handler(int sig) {
  * Return a pointer to the message on success, or NULL
  */
 static char *assemble_message() {
-
   void * msg;
   int i;
   int msg_len = message.num_packets * sizeof(data_t);
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
     while (pkt_cnt < pkt_total) {
       pause(); /* block until next packet */
     }
-  
+    
     msg = (char *) assemble_message();
     if (msg == NULL) {
       perror("Failed to assemble message");

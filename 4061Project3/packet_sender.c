@@ -26,6 +26,7 @@ static packet_t get_packet() {
 
   if (num_of_packets_sent == 0) {
     how_many = rand() % MAX_PACKETS;
+    pkt_total = how_many;
     if (how_many == 0) {
       how_many = 1;
     }
@@ -61,6 +62,7 @@ static packet_t get_packet() {
 }
 
 static void packet_sender(int sig) {
+  //printf ("In SIGALRM handler\n");
   packet_t pkt;
 
   pkt = get_packet();
@@ -123,8 +125,6 @@ int main(int argc, char **argv) {
    * TODO - turn on alarm timer ...
    * use  INTERVAL and INTERVAL_USEC for sec and usec values
   */
-  interval.it_interval.tv_sec = INTERVAL;
-  interval.it_interval.tv_usec = INTERVAL_USEC;
   interval.it_value.tv_sec = INTERVAL;
   interval.it_value.tv_usec = INTERVAL_USEC;
   setitimer(ITIMER_REAL, &interval, NULL);
@@ -138,7 +138,9 @@ int main(int argc, char **argv) {
     printf("Sending Message: %d\n", i);
     while (pkt_cnt < pkt_total) {
       pause(); /* block until next packet is sent. SIGALARM will unblock and call the handler.*/
+      setitimer(ITIMER_REAL, &interval, NULL);
     }
+    //usleep(5000000);
     pkt_cnt = 0;
   }
 

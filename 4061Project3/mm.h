@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #define INTERVAL 0
-#define INTERVAL_USEC 50000
+#define INTERVAL_USEC 500000
 #define CHUNK_SIZE 16 
 #define NUM_CHUNKS 1000000
 #define FREE 0  
