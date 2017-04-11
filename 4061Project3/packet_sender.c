@@ -23,7 +23,6 @@ static packet_t get_packet() {
   int i;
 
   packet_t pkt;
-
   if (num_of_packets_sent == 0) {
     how_many = rand() % MAX_PACKETS;
     if (how_many == 0) {
