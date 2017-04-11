@@ -128,7 +128,6 @@ int main(int argc, char **argv) {
   interval.it_value.tv_sec = INTERVAL;
   interval.it_value.tv_usec = INTERVAL_USEC;
   setitimer(ITIMER_REAL, &interval, NULL);
-
   /* And the timer */
 
   /* NOTE: the below code wont run now as you have not set the SIGALARM handler. Hence, 
@@ -136,6 +135,7 @@ int main(int argc, char **argv) {
   for (i = 1; i <= k; i++) {
     printf("==========================%d\n", i);
     printf("Sending Message: %d\n", i);
+  /* And the timer */
     while (pkt_cnt < pkt_total) {
       pause(); /* block until next packet is sent. SIGALARM will unblock and call the handler.*/
       setitimer(ITIMER_REAL, &interval, NULL);

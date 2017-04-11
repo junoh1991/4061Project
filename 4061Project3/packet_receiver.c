@@ -50,7 +50,7 @@ static char* assemble_message() {
     temp = (packet_t *) message.data[i];
     memcpy(msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
   }
-    
+  msg[msg_len] = '\0';  
   
   /* reset these for next message */
   pkt_total = 1;
