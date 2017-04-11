@@ -39,17 +39,19 @@ static void packet_handler(int sig) {
  * Return a pointer to the message on success, or NULL
  */
 static char *assemble_message() {
-  void * msg;
+  char* msg;
   int i;
   int msg_len = message.num_packets * sizeof(data_t);
 
   /* TODO - Allocate msg and assemble packets into it */
-  msg = (void *) malloc(msg_len);
+  msg = (void *) malloc(msg_len+1);
   packet_t * temp;
   for(i = 0; i < message.num_packets; i++) {
     temp = (packet_t *) message.data[i];
-    memcpy(msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
+    memcpy((void*)msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
   }
+  msg[msg_len] = '\0';
+    
   
   /* reset these for next message */
   pkt_total = 1;

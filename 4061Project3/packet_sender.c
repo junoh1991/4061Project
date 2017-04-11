@@ -26,10 +26,10 @@ static packet_t get_packet() {
 
   if (num_of_packets_sent == 0) {
     how_many = rand() % MAX_PACKETS;
-    pkt_total = how_many;
     if (how_many == 0) {
       how_many = 1;
     }
+    pkt_total = how_many;
     printf("Number of packets in current message: %d\n", how_many);
     which = -1;
     for (i = 0; i < MAX_PACKETS; ++i) {
