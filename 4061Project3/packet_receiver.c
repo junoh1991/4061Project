@@ -38,19 +38,18 @@ static void packet_handler(int sig) {
  * TODO - Create message from packets ... deallocate packets.
  * Return a pointer to the message on success, or NULL
  */
-static char *assemble_message() {
+static char* assemble_message() {
   char* msg;
   int i;
   int msg_len = message.num_packets * sizeof(data_t);
 
   /* TODO - Allocate msg and assemble packets into it */
-  msg = (void *) malloc(msg_len+1);
+  msg = (char*) malloc(msg_len+1);
   packet_t * temp;
   for(i = 0; i < message.num_packets; i++) {
     temp = (packet_t *) message.data[i];
-    memcpy((void*)msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
+    memcpy(msg + ((temp->which) * sizeof(data_t)), (void *) &temp->data, sizeof(data_t));
   }
-  msg[msg_len] = '\0';
     
   
   /* reset these for next message */
@@ -97,7 +96,7 @@ int main(int argc, char **argv) {
       pause(); /* block until next packet */
     }
     
-    msg = (char *) assemble_message();
+    msg =  assemble_message();
     if (msg == NULL) {
       perror("Failed to assemble message");
     }
