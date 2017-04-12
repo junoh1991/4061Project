@@ -6,6 +6,8 @@ static int pkt_cnt = 0;     /* how many packets have been sent for current messa
 static int pkt_total = 1;   /* how many packets to send send for the message */
 static int msqid = -1; /* id of the message queue */
 static int receiver_pid; /* pid of the receiver */
+static int terminateFlag = 0;
+
 
 /*
    Returns the packet for the current message. The packet is selected randomly.
@@ -60,6 +62,10 @@ static packet_t get_packet() {
   return pkt;
 }
 
+static void sigint_handler(int sig){
+  terminateFlag = 1; 
+}
+
 static void packet_sender(int sig) {
   //printf ("In SIGALRM handler\n");
   packet_t pkt;
@@ -99,7 +105,7 @@ int main(int argc, char **argv) {
   int i;
 
   struct itimerval interval;
-  struct sigaction act;           
+  struct sigaction act, act2;           
 
   /* TODO Create a message queue */ 
   msqid = msgget(key, 0666 | IPC_CREAT);
@@ -118,8 +124,12 @@ int main(int argc, char **argv) {
    */
   act.sa_handler = packet_sender;
   sigfillset(&act.sa_mask);
+  sigdelset(&act.sa_mask, SIGINT);
   sigaction(SIGALRM, &act, NULL);
   
+  act2.sa_handler = sigint_handler;
+  sigfillset(&act2.sa_mask);
+  sigaction(SIGINT, &act2, NULL);
   /*  
    * TODO - turn on alarm timer ...
    * use  INTERVAL and INTERVAL_USEC for sec and usec values
@@ -137,6 +147,12 @@ int main(int argc, char **argv) {
   /* And the timer */
     while (pkt_cnt < pkt_total) {
       pause(); /* block until next packet is sent. SIGALARM will unblock and call the handler.*/
+      if (terminateFlag)
+      {
+        kill(receiver_pid, SIGINT);
+        printf("Sender Exiting\n");
+        exit(0); 
+      }
       setitimer(ITIMER_REAL, &interval, NULL);
     }
     //usleep(5000000);

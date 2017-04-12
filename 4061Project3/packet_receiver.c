@@ -7,7 +7,7 @@ static message_t message;   /* current message structure */
 static mm_t mm;             /* memory manager will allocate memory for packets */
 static int pkt_cnt = 0;     /* how many packets have arrived for current message */
 static int pkt_total = 1;   /* how many packets to be received for the message */
-
+static char *msg;
 /*
    Handles the incoming packet. 
    Store the packet in a chunk from memory manager.
@@ -33,6 +33,15 @@ static void packet_handler(int sig) {
   pkt_cnt++;
   pkt_total = pkt.how_many;
 }
+
+static void sigint_handler(int sig)
+{
+mm_release(&mm);
+    free(msg);
+    msgctl(msqid, IPC_RMID, 0);
+    printf("Receiver Exiting\n");
+    exit(0);
+} 
 
 /*
  * TODO - Create message from packets ... deallocate packets.
@@ -68,7 +77,6 @@ int main(int argc, char **argv) {
 
   int k = atoi(argv[1]); /* no of messages you will get from the sender */
   int i;
-  char *msg;
 
   /* TODO - init memory manager for NUM_CHUNKS chunks of size CHUNK_SIZE each */
   mm_init(&mm, NUM_CHUNKS, CHUNK_SIZE);
@@ -83,13 +91,19 @@ int main(int argc, char **argv) {
   pid_queue_msg pid_msg;
   pid_msg.pid = pid;
   pid_msg.mtype = QUEUE_MSG_TYPE;
+  printf("Sending pid: %d\n", pid);
   msgsnd(msqid, (void *) &pid_msg, sizeof(int), 0);
   
   /* TODO set up SIGIO handler to read incoming packets from the queue. Check packet_handler()*/
-  struct sigaction act;
+  struct sigaction act, act2;
   act.sa_handler = packet_handler;
   sigfillset(&act.sa_mask);
+  sigdelset(&act.sa_mask, SIGINT);
   sigaction(SIGIO, &act, NULL);
+
+  act2.sa_handler = sigint_handler;
+  sigfillset(&act2.sa_mask);
+  sigaction(SIGINT, &act2, NULL);
 
   for (i = 1; i <= k; i++) {
     while (pkt_cnt < pkt_total) {
