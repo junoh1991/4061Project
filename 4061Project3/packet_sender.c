@@ -85,7 +85,8 @@ static void packet_sender(int sig) {
   // TODO send this packet_queue_msg to the receiver. Handle any error appropriately.
   if(msgsnd(msqid, (void *) &msg, sizeof(packet_t), 0) == -1) {
     perror("Message send failed");
-    exit(-1);
+    terminateFlag = 1;
+    return;
   }
   
   // TODO send SIGIO to the receiver if message sending was successful.
