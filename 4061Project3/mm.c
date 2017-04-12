@@ -18,8 +18,12 @@ double comp_time(struct timeval time_s, struct timeval time_e) {
   }
   return elap;
 }
-
-/* TODO - Implement.  Return 0 for success, or -1 and set errno on fail. */
+/* int mm_init(mm_t *mm, int hm, int sz) 
+ * This function allocates a memory manager. The memory manager allocate a chunk of memory
+ * , with each chunk equal to the size of sz and numbeer of chunks equal to the hm.
+ * returns 0 on success.
+ * returns -1 on failure. 
+*/
 int mm_init(mm_t *mm, int hm, int sz) {
     int i, j;
 
@@ -56,7 +60,11 @@ int mm_init(mm_t *mm, int hm, int sz) {
 }
 
 
-/* TODO - Implement */
+/* void *mm_get(mm_t *mm) 
+ * This functions returns an availble chunk of memory from the memory manager.
+ * Returns a chunk when successful.
+ * Returns NULL on failure.
+*/
 void *mm_get(mm_t *mm) {
     int index;
     struct chunk_t *temp;
@@ -82,7 +90,9 @@ void *mm_get(mm_t *mm) {
     }
 }
 
-/* TODO - Implement */
+/* void mm_put(mm_t *mm, void*chunk)
+ * This function puts back the allocated memory from mm_get.
+*/
 void mm_put(mm_t *mm, void *chunk) {
     struct chunk_t* temp = (struct chunk_t*) chunk;
     int *status = chunk + mm->offset;
@@ -103,7 +113,9 @@ void mm_put(mm_t *mm, void *chunk) {
 #endif
 }
 
-/* TODO - Implement */
+/* void mm_release(mm_t *mm)
+ * This function released heaps created by mm_init()
+*/
 void mm_release(mm_t *mm) {
     int i;
 

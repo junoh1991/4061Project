@@ -1,0 +1,30 @@
+/* CSci4061 S2017 Assignment 3
+* date: 4/12/2017
+* name: Tristan Mansfield, Marcus Jun Oh
+* id: mansf043, ohxxx371 */
+
+1. How to compile: call make. 'make'
+
+2. How to use the program from the shell: run the executables.
+    Part A:
+    & ./main_malloc
+    & ./main_mm
+
+    Part B:
+    $ ./packet_sender k & ./packet_receiver k
+    (where k is an integer)    
+
+3. The program's description:
+    Part A:
+    main_mm measures the time it takes to mm_get and mm_put one million chunks of 64 bytes.
+    main_mallo meesures the time it takes to malloc and free one million chunks of 64 bytes.
+
+    Part B:
+    The packet_sender sends packets in random order and packet_receiver reads the packet and assembles
+    the pakcets in alphabetical order.
+
+4. Work Distribution:
+    Jun: PartA
+    Tristan: PartB
+
+
