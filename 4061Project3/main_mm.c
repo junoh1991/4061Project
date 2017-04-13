@@ -1,3 +1,9 @@
+/* CSci4061 S2017 Assignment 3
+* login: ohxxx371
+* date: 4/12/2017
+* name: Tristan Mansfield, Marcus Jun Oh
+* id: mansf043, ohxxx371 */
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
