@@ -33,7 +33,7 @@ int dispatcher_count;
 int worker_count;
 int request_count;
 int numb_dispatcher, numb_worker;
-int ringbuffer;
+int ringsize;
 char* root_dir;
 request_t request_array[MAX_QUEUE_SIZE];
 
@@ -42,16 +42,24 @@ void * dispatch(void * arg)
     int fd;
     while(1)
     {
-        pthread_mutex_lock(&request_access);
-        while (request_count== ringbuffer)
-            pthread_cond_wait(&slot_availble, &request_access);
-        fd = accept_connection();
-        if (fd < 0)
+        if ((fd = accept_connection()) < 0)
+        {
+            //pthread_mutex_unlock(&request_access);
             continue;
+        }
+
+        
+        pthread_mutex_lock(&request_access);
+        while (request_count == ringsize)
+            pthread_cond_wait(&slot_availble, &request_access);
         request_array[dispatcher_count].m_socket = fd;
         if (get_request(fd, request_array[dispatcher_count].m_szRequest) < 0)
+        {
+            pthread_mutex_unlock(&request_access);
             continue;
-        dispatcher_count = (dispatcher_count + 1) % ringbuffer;
+        }
+        printf("%s\n", request_array[dispatcher_count].m_szRequest);
+        dispatcher_count = (dispatcher_count + 1) % ringsize;
         request_count++;
         pthread_cond_signal(&request_availble);
         pthread_mutex_unlock(&request_access);
@@ -68,7 +76,6 @@ void * worker(void * arg)
     FILE *fp;
     int file_size;
     char error_message[100];
-    char *dot;
     int index;
     while(1)
     {
@@ -76,31 +83,32 @@ void * worker(void * arg)
         while (request_count == 0)
             pthread_cond_wait(&request_availble, &request_access);
         request = request_array[request_count].m_szRequest;
-        fd = request_array[request_count].m_socket;
+        fd = request_array[worker_count].m_socket;
         request_count--;
-        worker_count = (worker_count + 1) % ringbuffer;
+        worker_count = (worker_count + 1) % ringsize;
         pthread_cond_signal(&slot_availble);
         pthread_mutex_unlock(&request_access);
-
+       
+        /* 
         fp = fopen(request, "r");
         if (fp == NULL)
             return_error(fd, error_message);
-        dot = strchr(request, '.');
-        if (strcmp(dot, ".html") == 0)
+        if (strstr(request, "html")) 
             content_type = "text/html";
-        else if (strcmp(dot, ".gif") == 0)
+        else if (strstr(request, "gif"))
             content_type = "image/gif";
-        else if (strcmp(dot, ".jpg") == 0)
+        else if (strstr(request, "jpg"))
             content_type = "image/jpeg";
         else
             content_type = "text/plain";        
-        
         fseek(fp, 0, SEEK_END);
         file_size = ftell(fp);
         rewind(fp);
         char transmit_buffer[file_size];
         fread(transmit_buffer, file_size, 1, fp);  
-        return_result(fd, content_type, transmit_buffer, file_size);
+        */
+        //return_result(fd, content_type, transmit_buffer, file_size);
+        return_result(fd, "text/plain", "message\0", 8);
     }    
 
     return NULL;
@@ -110,8 +118,6 @@ int main(int argc, char **argv)
 {
     int port;
     int i;
-    pthread_t dispatcher_threads[numb_dispatcher];
-    pthread_t worker_threads[numb_worker];
 
     //Error check first.
     if(argc != 6 && argc != 7)
@@ -123,11 +129,13 @@ int main(int argc, char **argv)
     port = atoi(argv[1]);
     numb_dispatcher = atoi(argv[3]);
     numb_worker = atoi(argv[4]);
-    ringbuffer = atoi(argv[5]);
+    ringsize = atoi(argv[5]);
     request_count = 0;
     dispatcher_count = 0;
     worker_count = 0;
-    root_dir = argv[2];
+    pthread_t dispatcher_threads[numb_dispatcher];
+    pthread_t worker_threads[numb_worker];
+
 
     init(port);
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
