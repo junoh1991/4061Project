@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include "util.h"
 #include "unistd.h"
+#include <errno.h>
 
 #define MAX_THREADS 100
 #define MAX_QUEUE_SIZE 100
@@ -70,10 +71,11 @@ void * dispatch(void * arg)
 void * worker(void * arg)
 {
     int fd;
+    int in;
     char *request;
+    char *full_path;
     char *content_type;
     int read_count;
-    FILE *fp;
     int file_size;
     char error_message[100];
     int index;
@@ -82,33 +84,39 @@ void * worker(void * arg)
         pthread_mutex_lock(&request_access);
         while (request_count == 0)
             pthread_cond_wait(&request_availble, &request_access);
-        request = request_array[request_count].m_szRequest;
+        request = request_array[worker_count].m_szRequest;
         fd = request_array[worker_count].m_socket;
         request_count--;
         worker_count = (worker_count + 1) % ringsize;
         pthread_cond_signal(&slot_availble);
         pthread_mutex_unlock(&request_access);
-       
-        /* 
-        fp = fopen(request, "r");
-        if (fp == NULL)
+        
+        full_path = (char *) malloc(sizeof(root_dir) + sizeof(request) + 1);
+        strcpy(full_path, root_dir);
+        strcat(full_path, request);
+        
+        in = open(full_path, O_RDONLY);
+        if (in == -1)
             return_error(fd, error_message);
-        if (strstr(request, "html")) 
+        if (strstr(full_path, ".html")) 
             content_type = "text/html";
-        else if (strstr(request, "gif"))
+        else if (strstr(full_path, ".gif"))
             content_type = "image/gif";
-        else if (strstr(request, "jpg"))
+        else if (strstr(full_path, ".jpg"))
             content_type = "image/jpeg";
         else
             content_type = "text/plain";        
-        fseek(fp, 0, SEEK_END);
-        file_size = ftell(fp);
-        rewind(fp);
+
+        file_size = lseek(in, 0, SEEK_END);
+        lseek(in, 0, SEEK_SET);
+        
         char transmit_buffer[file_size];
-        fread(transmit_buffer, file_size, 1, fp);  
-        */
-        //return_result(fd, content_type, transmit_buffer, file_size);
-        return_result(fd, "text/plain", "message\0", 8);
+        read(in, transmit_buffer, file_size);
+        printf("%s\n", transmit_buffer);
+        close(in);
+        
+        return_result(fd, content_type, transmit_buffer, file_size);
+        
     }    
 
     return NULL;
@@ -127,6 +135,7 @@ int main(int argc, char **argv)
     }
     // Parse the arguments when there is no error to the arguments.
     port = atoi(argv[1]);
+    root_dir = argv[2];
     numb_dispatcher = atoi(argv[3]);
     numb_worker = atoi(argv[4]);
     ringsize = atoi(argv[5]);
