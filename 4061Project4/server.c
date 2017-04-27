@@ -79,6 +79,8 @@ void * worker(void * arg)
     int file_size;
     char error_message[100];
     int index;
+    int reg_num = 0;
+    FILE* fp;
     while(1)
     {
         pthread_mutex_lock(&request_access);
@@ -90,6 +92,7 @@ void * worker(void * arg)
         worker_count = (worker_count + 1) % ringsize;
         pthread_cond_signal(&slot_availble);
         pthread_mutex_unlock(&request_access);
+        reg_num++;
         
         full_path = (char *) malloc(sizeof(root_dir) + sizeof(request) + 1);
         strcpy(full_path, root_dir);
@@ -117,6 +120,14 @@ void * worker(void * arg)
         
         return_result(fd, content_type, transmit_buffer, file_size);
         
+        pthread_mutex_lock(&request_access);
+        //log_fd = open("./webserver_log.txt", O_WRONLY | O_APPEND);
+        //write(log_fd, "derp\n", 5);
+        fp = fopen("./webserver_log.txt", "a");
+        fprintf(fp, "[%d][%d][%d][%s][%d]\n", (int) pthread_self(), reg_num, fd, request, file_size);
+        fclose(fp);
+        //close(log_fd);
+        pthread_mutex_unlock(&request_access);
     }    
 
     return NULL;
@@ -145,6 +156,17 @@ int main(int argc, char **argv)
     pthread_t dispatcher_threads[numb_dispatcher];
     pthread_t worker_threads[numb_worker];
 
+    //if ((log_fd = open("./webserver_log.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU)) == -1) {
+    //    printf("Log could not be created.\n");
+    //    exit(-1);
+    //}
+    //close(log_fd);
+    FILE* fp;
+    if ((fp = fopen("./webserver_log.txt", "w+")) == NULL) {
+        printf("Log could not be created.\n");
+        exit(-1);
+    }
+    fclose(fp);
 
     init(port);
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
