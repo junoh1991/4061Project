@@ -37,6 +37,7 @@ int numb_dispatcher, numb_worker;
 int ringsize;
 char* root_dir;
 request_t request_array[MAX_QUEUE_SIZE];
+FILE* fp;
 
 void * dispatch(void * arg)
 {
@@ -80,7 +81,6 @@ void * worker(void * arg)
     char error_message[100];
     int index;
     int reg_num = 0;
-    FILE* fp;
     while(1)
     {
         pthread_mutex_lock(&request_access);
@@ -123,9 +123,8 @@ void * worker(void * arg)
         pthread_mutex_lock(&request_access);
         //log_fd = open("./webserver_log.txt", O_WRONLY | O_APPEND);
         //write(log_fd, "derp\n", 5);
-        fp = fopen("./webserver_log.txt", "a");
-        fprintf(fp, "[%d][%d][%d][%s][%d]\n", (int) pthread_self(), reg_num, fd, request, file_size);
-        fclose(fp);
+        fprintf(fp, "[%d][%d][%d][%s][%d]\n", 5, reg_num, fd, request, file_size);
+        fflush(fp);
         //close(log_fd);
         pthread_mutex_unlock(&request_access);
     }    
@@ -161,12 +160,10 @@ int main(int argc, char **argv)
     //    exit(-1);
     //}
     //close(log_fd);
-    FILE* fp;
     if ((fp = fopen("./webserver_log.txt", "w+")) == NULL) {
         printf("Log could not be created.\n");
         exit(-1);
     }
-    fclose(fp);
 
     init(port);
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
