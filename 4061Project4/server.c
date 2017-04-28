@@ -81,6 +81,7 @@ void * worker(void * arg)
     char error_message[100];
     int index;
     int reg_num = 0;
+    int threadID = *(int*)arg;
     while(1)
     {
         pthread_mutex_lock(&request_access);
@@ -92,9 +93,9 @@ void * worker(void * arg)
         worker_count = (worker_count + 1) % ringsize;
         pthread_cond_signal(&slot_availble);
         pthread_mutex_unlock(&request_access);
+
         reg_num++;
-        
-        full_path = (char *) malloc(sizeof(root_dir) + sizeof(request) + 1);
+        char full_path[sizeof(root_dir) + sizeof(request) +1];
         strcpy(full_path, root_dir);
         strcat(full_path, request);
         
@@ -121,11 +122,8 @@ void * worker(void * arg)
         return_result(fd, content_type, transmit_buffer, file_size);
         
         pthread_mutex_lock(&request_access);
-        //log_fd = open("./webserver_log.txt", O_WRONLY | O_APPEND);
-        //write(log_fd, "derp\n", 5);
-        fprintf(fp, "[%d][%d][%d][%s][%d]\n", 5, reg_num, fd, request, file_size);
+        fprintf(fp, "[%d][%d][%d][%s][%d]\n", threadID, reg_num, fd, request, file_size);
         fflush(fp);
-        //close(log_fd);
         pthread_mutex_unlock(&request_access);
     }    
 
@@ -169,7 +167,7 @@ int main(int argc, char **argv)
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
         pthread_create(&dispatcher_threads[i], NULL, dispatch, NULL);
     for(i = 0; i < numb_worker; i ++)
-        pthread_create(&worker_threads[i], NULL, worker, NULL);
+        pthread_create(&worker_threads[i], NULL, worker, (void*)&i);
 
 
     pause();
