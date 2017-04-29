@@ -1,0 +1,26 @@
+/* csci4061 S2016 Assignment 4 
+* date: 05/03/2017
+* names: Tristan Mansfield, mansf043, 5065831, section 11
+*        Marcus Jun Oh, ohxxx371, 5214365, section 13
+*/
+
+1. How to compile: call make. 'make'
+
+2. How to use the program from the shell:
+
+    ./web_server port path num_dispatch num_workers qlen
+    
+    port - number can be specified (between 1025 and 65535)
+    path - path to your web root location where files are served from
+    num_dispatch - number of dispatcher threads to run
+    num_workers - number of worker threads to run
+    qlen - fixed, bounded length of the request queue
+
+3. The program's description:
+    
+    The program creates a web server that uses dispatcher threads to receive requests from clients and worker
+    threads to complete those requests and send back info to the client (or handle errors). The program can
+    handle multiple requests concurrently. A log detailing all of the requests is created while the program runs.
+
+4. Work Distribution:
+    We did partner programming for the whole project so the distribution is even.

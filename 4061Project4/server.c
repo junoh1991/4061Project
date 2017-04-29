@@ -1,8 +1,7 @@
 /* csci4061 S2016 Assignment 4 
-* section: one_digit_number 
-* date: mm/dd/yy 
-* names: Name of each member of the team (for partners)
-* UMN Internet ID, Student ID (xxxxxxxx, 4444444), (for partners)
+* date: 05/03/2017
+* names: Tristan Mansfield, mansf043, 5065831, section 11
+         Marcus Jun Oh, ohxxx371, 5214365, section 13
 */
 
 #include <stdio.h>
@@ -42,24 +41,24 @@ char* root_dir;
 request_t request_array[MAX_QUEUE_SIZE];
 FILE* fp;
 
+// Dispatcher threads run until a request is found, then sends it to a worker thread to complete.
 void * dispatch(void * arg)
 {
     int fd;
     while(1)
     {
+        // spin until request is found
         if ((fd = accept_connection()) < 0)
-        {
-            //pthread_mutex_unlock(&request_access);
             continue;
-        }
-
-        
+            
+        // If request is found, lock mutex, increase bounded buffer, and signal dispatcher threads.
         pthread_mutex_lock(&request_access);
         while (request_count == ringsize)
             pthread_cond_wait(&slot_availble, &request_access);
         request_array[dispatcher_count].m_socket = fd;
         if (get_request(fd, request_array[dispatcher_count].m_szRequest) < 0)
         {
+            printf("Faulty request. Resuming.\n");
             pthread_mutex_unlock(&request_access);
             continue;
         }
@@ -71,6 +70,9 @@ void * dispatch(void * arg)
     return NULL;
 }
 
+// Worker threads receive a request from the dispatcher threads, then get the requested file (or handles
+// an error on a faulty request.
+// Note: Each thread is assigned a thread ID from the main function (as void * arg)
 void * worker(void * arg)
 {
     int fd;
@@ -80,12 +82,13 @@ void * worker(void * arg)
     char *content_type;
     int read_count;
     int file_size;
-    char error_message[100];
     int index;
     int reg_num = 0;
     int threadID = *(int*)arg;
     while(1)
     {
+        // When dispatcher thread signals this thread, block mutex, decrease bounded buffer, 
+        // and signals dispatcher thread.
         pthread_mutex_lock(&request_access);
         while (request_count == 0)
             pthread_cond_wait(&request_availble, &request_access);
@@ -95,42 +98,53 @@ void * worker(void * arg)
         worker_count = (worker_count + 1) % ringsize;
         pthread_cond_signal(&slot_availble);
         pthread_mutex_unlock(&request_access);
-
+        // Parse full path from request
         reg_num++;
         char full_path[sizeof(root_dir) + sizeof(request) +1];
         strcpy(full_path, root_dir);
         strcat(full_path, request);
-        
+        // Attempt to open file from full path
         in = open(full_path, O_RDONLY);
-        if (in == -1)
-            return_error(fd, error_message);
-        if (strstr(full_path, ".html")) 
-            content_type = "text/html";
-        else if (strstr(full_path, ".gif"))
-            content_type = "image/gif";
-        else if (strstr(full_path, ".jpg"))
-            content_type = "image/jpeg";
-        else
-            content_type = "text/plain";        
+        if (in == -1) // File is not found, return error and write error to log
+        {
+            return_error(fd, "Bad request");
+            pthread_mutex_lock(&file_access);
+            fprintf(fp, "[%d][%d][%d][%s][File not found.]\n", threadID, reg_num, fd, request);
+            fflush(fp);
+            pthread_mutex_unlock(&file_access);
+        }
+        else // File is found, determine file type and size, read file to buffer, return result to client
+             // and write request info to log
+        {
+            if (strstr(full_path, ".html")) 
+                content_type = "text/html";
+            else if (strstr(full_path, ".gif"))
+                content_type = "image/gif";
+            else if (strstr(full_path, ".jpg"))
+                content_type = "image/jpeg";
+            else
+                content_type = "text/plain";        
 
-        file_size = lseek(in, 0, SEEK_END);
-        lseek(in, 0, SEEK_SET);
-        
-        char transmit_buffer[file_size];
-        read(in, transmit_buffer, file_size);
-        close(in);
-        
-        return_result(fd, content_type, transmit_buffer, file_size);
-        
-        pthread_mutex_lock(&file_access);
-        fprintf(fp, "[%d][%d][%d][%s][%d]\n", threadID, reg_num, fd, request, file_size);
-        fflush(fp);
-        pthread_mutex_unlock(&file_access);
+            file_size = lseek(in, 0, SEEK_END);
+            lseek(in, 0, SEEK_SET);
+            
+            char transmit_buffer[file_size];
+            read(in, transmit_buffer, file_size);
+            close(in);
+            
+            return_result(fd, content_type, transmit_buffer, file_size);
+            
+            pthread_mutex_lock(&file_access);
+            fprintf(fp, "[%d][%d][%d][%s][%d]\n", threadID, reg_num, fd, request, file_size);
+            fflush(fp);
+            pthread_mutex_unlock(&file_access);
+        }
     }    
 
     return NULL;
 }
 
+// Initializes the web server and creates dispatcher and worker threads, runs until manually terminated
 int main(int argc, char **argv)
 {
     int port;
@@ -148,18 +162,27 @@ int main(int argc, char **argv)
     numb_dispatcher = atoi(argv[3]);
     numb_worker = atoi(argv[4]);
     ringsize = atoi(argv[5]);
+    
+    if (numb_dispatcher > MAX_THREADS || numb_worker > MAX_THREADS || ringsize > MAX_QUEUE_SIZE ||
+        numb_dispatcher < 1 || numb_worker < 1 || ringsize < 1)
+    {
+        printf("Number of dispatcher threads, worker threads, and queue length must all be between 1 and 100 each.\n");
+        exit(-1);
+    }
+    
     request_count = 0;
     dispatcher_count = 0;
     worker_count = 0;
     pthread_t dispatcher_threads[numb_dispatcher];
     pthread_t worker_threads[numb_worker];
     int threadID[numb_worker];
+    // create thread ids
     for (i = 0; i < numb_worker; i++)
     {
         threadID[i] = i;
     }
 
-    if ((fp = fopen("./webserver_log.txt", "w+")) == NULL) {
+    if ((fp = fopen("./webserver_log", "w+")) == NULL) {
         printf("Log could not be created.\n");
         exit(-1);
     }
@@ -167,10 +190,10 @@ int main(int argc, char **argv)
     init(port);
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
         pthread_create(&dispatcher_threads[i], NULL, dispatch, NULL);
-    for(i = 0; i < numb_worker; i ++)
+    for(i = 0; i < numb_worker; i ++) // create worker threads
         pthread_create(&worker_threads[i], NULL, worker, (void*)&threadID[i]);
 
-
+    // pause while server runs
     pause();
     printf("Call init() first and make a dispather and worker threads\n");
     return 0;
