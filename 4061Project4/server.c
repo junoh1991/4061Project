@@ -30,6 +30,9 @@ typedef struct request
 pthread_mutex_t request_access = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t slot_availble = PTHREAD_COND_INITIALIZER;
 pthread_cond_t request_availble = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t file_access = PTHREAD_MUTEX_INITIALIZER;
+
+
 int dispatcher_count;
 int worker_count;
 int request_count;
@@ -60,7 +63,6 @@ void * dispatch(void * arg)
             pthread_mutex_unlock(&request_access);
             continue;
         }
-        printf("%s\n", request_array[dispatcher_count].m_szRequest);
         dispatcher_count = (dispatcher_count + 1) % ringsize;
         request_count++;
         pthread_cond_signal(&request_availble);
@@ -116,15 +118,14 @@ void * worker(void * arg)
         
         char transmit_buffer[file_size];
         read(in, transmit_buffer, file_size);
-        printf("%s\n", transmit_buffer);
         close(in);
         
         return_result(fd, content_type, transmit_buffer, file_size);
         
-        pthread_mutex_lock(&request_access);
+        pthread_mutex_lock(&file_access);
         fprintf(fp, "[%d][%d][%d][%s][%d]\n", threadID, reg_num, fd, request, file_size);
         fflush(fp);
-        pthread_mutex_unlock(&request_access);
+        pthread_mutex_unlock(&file_access);
     }    
 
     return NULL;
@@ -152,12 +153,12 @@ int main(int argc, char **argv)
     worker_count = 0;
     pthread_t dispatcher_threads[numb_dispatcher];
     pthread_t worker_threads[numb_worker];
+    int threadID[numb_worker];
+    for (i = 0; i < numb_worker; i++)
+    {
+        threadID[i] = i;
+    }
 
-    //if ((log_fd = open("./webserver_log.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU)) == -1) {
-    //    printf("Log could not be created.\n");
-    //    exit(-1);
-    //}
-    //close(log_fd);
     if ((fp = fopen("./webserver_log.txt", "w+")) == NULL) {
         printf("Log could not be created.\n");
         exit(-1);
@@ -167,7 +168,7 @@ int main(int argc, char **argv)
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
         pthread_create(&dispatcher_threads[i], NULL, dispatch, NULL);
     for(i = 0; i < numb_worker; i ++)
-        pthread_create(&worker_threads[i], NULL, worker, (void*)&i);
+        pthread_create(&worker_threads[i], NULL, worker, (void*)&threadID[i]);
 
 
     pause();
