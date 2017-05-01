@@ -47,11 +47,12 @@ void * dispatch(void * arg)
     int fd;
     while(1)
     {
-        // spin until request is found
+        // block until request is found
         if ((fd = accept_connection()) < 0)
             continue;
             
-        // If request is found, lock mutex, increase bounded buffer, and signal dispatcher threads.
+        // If request is found, lock mutex, increase bounded buffer, signal dispatcher threads,
+        // and unlock mutex for next connection.
         pthread_mutex_lock(&request_access);
         while (request_count == ringsize)
             pthread_cond_wait(&slot_availble, &request_access);
@@ -88,7 +89,7 @@ void * worker(void * arg)
     while(1)
     {
         // When dispatcher thread signals this thread, block mutex, decrease bounded buffer, 
-        // and signals dispatcher thread.
+        // signals dispatcher thread, and unlock mutex for next worker threads.
         pthread_mutex_lock(&request_access);
         while (request_count == 0)
             pthread_cond_wait(&request_availble, &request_access);
@@ -132,7 +133,8 @@ void * worker(void * arg)
             read(in, transmit_buffer, file_size);
             close(in);
             
-            return_result(fd, content_type, transmit_buffer, file_size);
+            if (return_result(fd, content_type, transmit_buffer, file_size) != 0) 
+                printf("Error occured returning the requested file to the clinet\n");
             
             pthread_mutex_lock(&file_access);
             fprintf(fp, "[%d][%d][%d][%s][%d]\n", threadID, reg_num, fd, request, file_size);
@@ -145,6 +147,7 @@ void * worker(void * arg)
 }
 
 // Initializes the web server and creates dispatcher and worker threads, runs until manually terminated
+// or ran out of threads. 
 int main(int argc, char **argv)
 {
     int port;
@@ -188,13 +191,19 @@ int main(int argc, char **argv)
     }
 
     init(port);
+    // Initialze all threads according to the parameters passed into the main.
     for(i = 0; i < numb_dispatcher; i ++) // create dispather threads;
         pthread_create(&dispatcher_threads[i], NULL, dispatch, NULL);
     for(i = 0; i < numb_worker; i ++) // create worker threads
         pthread_create(&worker_threads[i], NULL, worker, (void*)&threadID[i]);
 
-    // pause while server runs
-    pause();
-    printf("Call init() first and make a dispather and worker threads\n");
+    // Wait until all threads are depleted. Ideally, no threads should be closed.
+    for(i = 0; i < numb_dispatcher; i ++)
+        pthread_join(dispatcher_threads[i], NULL);
+    for(i = 0; i < numb_worker; i ++)
+        pthread_join(worker_threads[i], NULL);
+
+    // Program ran out of threads. Close the log file.
+    fclose(fp);
     return 0;
 }
